@@ -125,7 +125,7 @@ namespace ScrollsPost {
 
         public void SendMessage(String message) {
             RoomChatMessageMessage msg = new RoomChatMessageMessage();
-            msg.from = "ScrollsPost";
+            msg.from = GetName();
             msg.text = message;
             msg.roomName = App.ArenaChat.ChatRooms.GetCurrentRoom();
 
