@@ -69,7 +69,9 @@ namespace ScrollsPost {
                 return new MethodDefinition[] {
                     scrollsTypes["Communicator"].Methods.GetMethod("sendRequest", new Type[]{ typeof(Message) }),
                     scrollsTypes["TradeSystem"].Methods.GetMethod("StartTrade")[0],
-                    scrollsTypes["CardView"].Methods.GetMethod("updateGraphics")[0]
+                    scrollsTypes["TradeSystem"].Methods.GetMethod("CloseTrade")[0],
+                    scrollsTypes["TradeSystem"].Methods.GetMethod("UpdateView")[0],
+                    scrollsTypes["CardView"].Methods.GetMethod("updateGraphics")[0],
                 };
             } catch {
                 return new MethodDefinition[] { };
@@ -94,6 +96,9 @@ namespace ScrollsPost {
             if( info.targetMethod.Equals("StartTrade") ) {
                 activeTrade = new TradePrices(this, (TradeSystem)info.target);
             
+            } else if( info.targetMethod.Equals("UpdateView") && activeTrade != null ) {
+                activeTrade.PreUpdateView();
+
             } else if( info.targetMethod.Equals("CloseTrade") && activeTrade != null ) {
                 activeTrade.Finished();
                 activeTrade = null;
@@ -129,6 +134,8 @@ namespace ScrollsPost {
         public override void AfterInvoke(InvocationInfo info, ref object returnValue) {
             if( info.targetMethod.Equals("updateGraphics") && activeTrade != null ) {
                 activeTrade.PostOverlayRender((Card) info.arguments[0]);
+            } else if( info.targetMethod.Equals("UpdateView") && activeTrade != null ) {
+                activeTrade.PostUpdateView();
             }
 
             return;

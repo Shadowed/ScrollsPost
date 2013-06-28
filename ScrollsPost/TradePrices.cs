@@ -6,22 +6,23 @@ using System.Threading;
 using JsonFx.Json;
 
 namespace ScrollsPost {
-	public class TradePrices {
+    public class TradePrices {
         private ScrollsPost.Mod mod;
         private TradeSystem trade;
-
         private object player1;
         private object player2;
         private Type ptsType;
-        private List<Card>[] allCards;
+        private Dictionary<int, CardType> allCardTypes = new Dictionary<int, CardType>();
         private Dictionary<int, String> origNames = new Dictionary<int, String>();
+        private Dictionary<int, String> pricedNames = new Dictionary<int, String>();
 
         public TradePrices(ScrollsPost.Mod mod, TradeSystem trade) {
             this.mod = mod;
             this.trade = trade;
 
             new Thread(new ThreadStart(CheckData)).Start();
-		}
+        }
+
 
         // Strip out our price hook
         public void Finished() {
@@ -29,54 +30,62 @@ namespace ScrollsPost {
         }
 
         private void FinishAsync() {
-            foreach( List<Card> cards in allCards ) {
-                foreach( Card card in cards ) {
-                    CardType type = (CardType)typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
-                    if( origNames.ContainsKey(type.id) ) {
-                        type.name = origNames[type.id];
-                    }
+            foreach( var pair in allCardTypes ) {
+                if( origNames.ContainsKey(pair.Value.id) ) {
+                    pair.Value.name = origNames[pair.Value.id];
                 }
             }
         }
 
         // Overlay hooks
         public void PreOverlayRender(Card card) {
-            CardType type = (CardType) typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
+            CardType type = allCardTypes[card.typeId];
             if( origNames.ContainsKey(type.id) ) {
                 type.name = origNames[type.id];
             }
         }
 
         public void PostOverlayRender(Card card) {
-            CardType type = (CardType) typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
-            SetupCard(type);
+            allCardTypes[card.typeId].name = pricedNames[card.typeId];
         }
 
-        // Helpers for all
-        private void SetupCard(CardType type) {
-            if( !origNames.ContainsKey(type.id) ) {
-                origNames.Add(type.id, type.name);
-            }
+        // Restore card names before sorting
+        public void PreUpdateView() {
+            FinishAsync();
+        }
 
-            APIPriceCheckResult scroll = mod.scrollPrices.GetScroll(type.id);
-            if( scroll != null ) {
-                type.name = String.Format("[{0}g] {1}", scroll.price.suggested, origNames[type.id]);
+        public void PostUpdateView() {
+            foreach( var pair in allCardTypes ) {
+                pair.Value.name = pricedNames[pair.Value.id];
             }
         }
 
         // Cards have been loaded in
         private void Loaded(List<Card> allCards1, List<Card> allCards2) {
-            allCards = new List<Card>[] { allCards1, allCards2 };
-
-            foreach( List<Card> cards in allCards ) {
+            foreach( List<Card> cards in new List<Card>[] { allCards1, allCards2 } ) {
                 foreach( Card card in cards ) {
                     CardType type = (CardType) typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
-                    SetupCard(type);
+
+                    // Cards seem to be shared, if between two trades you have all 138 cards, you actually only have 138 CardType instances
+                    if( allCardTypes.ContainsKey(type.id) )
+                        continue;
+
+                    allCardTypes.Add(type.id, type);
+
+                    // Store the original name for easy restoring of names for sorting/etc
+                    origNames.Add(type.id, type.name);
+
+                    // Grab the price and store the name if any
+                    APIPriceCheckResult scroll = mod.scrollPrices.GetScroll(type.id);
+                    if( scroll != null ) {
+                        type.name = String.Format("[{0}g] {1}", scroll.price.suggested, origNames[type.id]);
+
+                        pricedNames.Add(type.id, type.name);
+                    } else {
+                        pricedNames.Add(type.id, type.name);
+                    }
                 }
             }
-
-            ptsType.GetMethod("SetCards").Invoke(this.player1, new object[] { allCards1 });
-            ptsType.GetMethod("SetCards").Invoke(this.player2, new object[] { allCards2 });
         }
 
         private void CheckData() {
@@ -102,8 +111,8 @@ namespace ScrollsPost {
                 }
 
                 Thread.Sleep(5);
-           }
+            }
         }
-	}
+    }
 }
 
