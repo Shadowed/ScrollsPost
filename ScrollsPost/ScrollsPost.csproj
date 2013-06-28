@@ -62,6 +62,8 @@
     <Compile Include="ScrollsPost.cs" />
     <Compile Include="APIResult\PriceCheck.cs" />
     <Compile Include="PriceCheck.cs" />
+    <Compile Include="TradePrices.cs" />
+    <Compile Include="PriceManager.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>

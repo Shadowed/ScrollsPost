@@ -6,7 +6,7 @@ namespace ScrollsPost {
 	public class PriceCheck {
         private ScrollsPost.Mod mod;
 
-		public PriceCheck (ScrollsPost.Mod mod, String period, String search) {
+		public PriceCheck(ScrollsPost.Mod mod, String period, String search) {
             this.mod = mod;
 
 			WebClient wc = new WebClient();

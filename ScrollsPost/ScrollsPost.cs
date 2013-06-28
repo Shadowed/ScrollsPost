@@ -18,7 +18,11 @@ namespace ScrollsPost {
     public class Mod : BaseMod, IOkCallback, IOkStringCancelCallback {
         private String configFolder;
         private String logFolder;
+        private TradePrices activeTrade;
+
         public Dictionary<String, String> config;
+        public PriceManager scrollPrices;
+        public Assembly asm;
 
         public Mod() {
             configFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "config";
@@ -30,6 +34,9 @@ namespace ScrollsPost {
             if( !Directory.Exists(logFolder + Path.DirectorySeparatorChar) ) {
                 Directory.CreateDirectory(logFolder + Path.DirectorySeparatorChar);
             }
+
+            asm = Assembly.LoadFrom(this.OwnFolder() + Path.DirectorySeparatorChar + ".." + Path.DirectorySeparatorChar + ".." + Path.DirectorySeparatorChar + "Assembly-CSharp.dll");
+            scrollPrices = new PriceManager(this);
         }
 
         public static string GetName() {
@@ -37,7 +44,7 @@ namespace ScrollsPost {
         }
 
         public static int GetVersion() {
-            return 3;
+            return 1;
         }
 
         public String ConfigPath(String file) {
@@ -60,7 +67,9 @@ namespace ScrollsPost {
         public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version) {
             try {
                 return new MethodDefinition[] {
-                    scrollsTypes["Communicator"].Methods.GetMethod("sendRequest", new Type[]{ typeof(Message) })
+                    scrollsTypes["Communicator"].Methods.GetMethod("sendRequest", new Type[]{ typeof(Message) }),
+                    scrollsTypes["TradeSystem"].Methods.GetMethod("StartTrade")[0],
+                    scrollsTypes["CardView"].Methods.GetMethod("updateGraphics")[0]
                 };
             } catch {
                 return new MethodDefinition[] { };
@@ -82,7 +91,17 @@ namespace ScrollsPost {
             }
             */
 
-            if( info.targetMethod.Equals("sendRequest") ) {
+
+            if( info.targetMethod.Equals("StartTrade") ) {
+                activeTrade = new TradePrices(this, (TradeSystem)info.target);
+            
+            } else if( info.targetMethod.Equals("CloseTrade") ) {
+                activeTrade = null;
+             
+            } else if( info.targetMethod.Equals("updateGraphics") && activeTrade != null ) {
+                activeTrade.PreOverlayRender((Card) info.arguments[0]);
+
+            } else if( info.targetMethod.Equals("sendRequest") ) {
                 if( info.arguments[0] is RoomChatMessageMessage ) {
                     RoomChatMessageMessage msg = (RoomChatMessageMessage)info.arguments[0];
                     if( msg.text.StartsWith("/pc-1h") ) {
@@ -108,19 +127,23 @@ namespace ScrollsPost {
         }
 
         public override void AfterInvoke(InvocationInfo info, ref object returnValue) {
-          return;
+            if( info.targetMethod.Equals("updateGraphics") && activeTrade != null ) {
+                activeTrade.PostOverlayRender((Card) info.arguments[0]);
+            }
+
+            return;
         }
 
         public void PopupCancel(string popupType) {
-          return;
+            return;
         }
 
         public void PopupOk(string popupType) {
-          return;
+            return;
         }
 
         public void PopupOk(String popupType, String choice) {
-          return;
+            return;
         }
 
         public void SendMessage(String message) {
