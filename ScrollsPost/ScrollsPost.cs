@@ -95,7 +95,8 @@ namespace ScrollsPost {
             if( info.targetMethod.Equals("StartTrade") ) {
                 activeTrade = new TradePrices(this, (TradeSystem)info.target);
             
-            } else if( info.targetMethod.Equals("CloseTrade") ) {
+            } else if( info.targetMethod.Equals("CloseTrade") && activeTrade != null ) {
+                activeTrade.Finished();
                 activeTrade = null;
              
             } else if( info.targetMethod.Equals("updateGraphics") && activeTrade != null ) {
