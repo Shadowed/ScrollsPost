@@ -91,7 +91,6 @@ namespace ScrollsPost {
             }
             */
 
-
             if( info.targetMethod.Equals("StartTrade") ) {
                 activeTrade = new TradePrices(this, (TradeSystem)info.target);
             

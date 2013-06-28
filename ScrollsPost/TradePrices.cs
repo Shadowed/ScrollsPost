@@ -13,8 +13,8 @@ namespace ScrollsPost {
         private object player1;
         private object player2;
         private Type ptsType;
-        private String pricedName;
         private List<Card>[] allCards;
+        private Dictionary<int, String> origNames = new Dictionary<int, String>();
 
         public TradePrices(ScrollsPost.Mod mod, TradeSystem trade) {
             this.mod = mod;
@@ -32,8 +32,8 @@ namespace ScrollsPost {
             foreach( List<Card> cards in allCards ) {
                 foreach( Card card in cards ) {
                     CardType type = (CardType)typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
-                    if( type.name.StartsWith("[") ) {
-                        type.name = type.name.Split(new char[] { ' ' }, 2)[1];
+                    if( origNames.ContainsKey(type.id) ) {
+                        type.name = origNames[type.id];
                     }
                 }
             }
@@ -42,16 +42,26 @@ namespace ScrollsPost {
         // Overlay hooks
         public void PreOverlayRender(Card card) {
             CardType type = (CardType) typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
-            if( type.name.StartsWith("[") ) {
-                pricedName = type.name;
-                type.name = type.name.Split(new char[] { ' ' }, 2)[1];
+            if( origNames.ContainsKey(type.id) ) {
+                type.name = origNames[type.id];
             }
         }
 
         public void PostOverlayRender(Card card) {
             CardType type = (CardType) typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
-            type.name = pricedName;
-            pricedName = null;
+            SetupCard(type);
+        }
+
+        // Helpers for all
+        private void SetupCard(CardType type) {
+            if( !origNames.ContainsKey(type.id) ) {
+                origNames.Add(type.id, type.name);
+            }
+
+            APIPriceCheckResult scroll = mod.scrollPrices.GetScroll(type.id);
+            if( scroll != null ) {
+                type.name = String.Format("[{0}g] {1}", scroll.price.suggested, origNames[type.id]);
+            }
         }
 
         // Cards have been loaded in
@@ -60,13 +70,8 @@ namespace ScrollsPost {
 
             foreach( List<Card> cards in allCards ) {
                 foreach( Card card in cards ) {
-                    CardType type = (CardType)typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
-                    if( !type.name.StartsWith("[") ) {
-                        APIPriceCheckResult scroll = mod.scrollPrices.GetScroll(type.id);
-                        if( scroll != null ) {
-                            type.name = String.Format("[{0}g] {1}", scroll.price.suggested, type.name);
-                        }
-                    }
+                    CardType type = (CardType) typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
+                    SetupCard(type);
                 }
             }
 
@@ -75,7 +80,6 @@ namespace ScrollsPost {
         }
 
         private void CheckData() {
-
             ptsType = mod.asm.GetType("TradeSystem+PlayerTradeStatus");
             this.player1 = typeof(TradeSystem).GetField("p1", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(this.trade);
             this.player2 = typeof(TradeSystem).GetField("p2", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(this.trade);
