@@ -73,8 +73,8 @@ namespace ScrollsPost {
 
             this.header = header;
             this.description = description;
-            this.cancelText = "Cancel";
-            this.okText = "Ok";
+            this.cancelText = "Done";
+            this.okText = popupType.Equals("main") ? null : "Back";
         }
 
         private void OnGUI() {
@@ -174,9 +174,17 @@ namespace ScrollsPost {
             Rect r2 = new Rect(popupInner.xMax - (float)Screen.height * 0.2f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.2f, (float)Screen.height * 0.05f);
             GUI.skin.button.fontSize = 10 + Screen.height / 60;
 
-            if( this.GUIButton(r2, this.okText) ){
+            if( this.GUIButton(r2, this.cancelText) ){
                 this.HidePopup();
                 this.cancelCallback.PopupCancel(this.popupType);
+            }
+
+            if( !String.IsNullOrEmpty(this.okText) ) {
+                Rect r3 = new Rect(popupInner.xMax - (float)Screen.height * 0.740f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.2f, (float)Screen.height * 0.05f);
+                if( this.GUIButton(r3, this.okText) ) {
+                    this.HidePopup();
+                    this.okStringCallback.PopupOk("back", "back");
+                }
             }
 
             GUI.skin.button.fontSize = fontSize2;

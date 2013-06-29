@@ -7,6 +7,7 @@ namespace ScrollsPost {
     public class ConfigManager {
         private ScrollsPost.Mod mod;
         private Dictionary<String, object> config;
+        private Boolean newInstall;
 
         public ConfigManager(ScrollsPost.Mod mod) {
             this.mod = mod;
@@ -28,8 +29,12 @@ namespace ScrollsPost {
             if( File.Exists(path("config.json")) ) {
                 String data = File.ReadAllText(path("config.json"));
                 config = new JsonReader().Read<Dictionary<String, object>>(data);
+
+            // Fresh install
             } else {
                 config = new Dictionary<String, object>();
+
+                newInstall = true;
             }
         }
 
@@ -39,8 +44,28 @@ namespace ScrollsPost {
         }
 
         // Setters & Getters
+        public Boolean NewInstall() {
+            return newInstall;
+        }
+
+        public Boolean VersionBelow(int version) {
+            return config.ContainsKey("version") ? (GetInt("version") < version) : true;
+        }
+
         public object Get(String key) {
             return config[key];
+        }
+
+        public int GetInt(String key) {
+            return (int)config[key];
+        }
+
+        public String GetString(String key) {
+            return (String)config[key];
+        }
+
+        public Boolean GetBoolean(String key) {
+            return config[key].Equals("1");
         }
 
         public object GetWithDefault(String key, object defValue) {
@@ -56,11 +81,7 @@ namespace ScrollsPost {
         }
 
         public void Add(String key, object value) {
-            if( config.ContainsKey(key) ) {
-                config[key] = value;
-            } else {
-                config.Add(key, value);
-            }
+            config[key] = value;
 
             // Should be buffered/async some point
             Write();

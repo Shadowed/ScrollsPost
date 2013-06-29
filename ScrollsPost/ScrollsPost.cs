@@ -19,12 +19,11 @@ namespace ScrollsPost {
         private String logFolder;
         private TradePrices activeTrade;
 
-        private ConfigGUI configGUI;
+        public ConfigGUI configGUI;
         public ConfigManager config;
         public PriceManager scrollPrices;
         public Assembly asm;
-
-        public Boolean configgui;
+        public Boolean loggedIn;
 
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
@@ -45,7 +44,7 @@ namespace ScrollsPost {
         }
 
         public static int GetVersion() {
-            return 2;
+            return 4;
         }
 
         public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version) {
@@ -61,19 +60,8 @@ namespace ScrollsPost {
                 return new MethodDefinition[] { };
             }
         }
-
-        public void Test() {
-            Thread.Sleep(200);
-            configGUI.Show();
-        }
-
         public override bool BeforeInvoke(InvocationInfo info, out object returnValue) {
             returnValue = null;
-
-            if( !configgui ) {
-                configgui = true;
-                new Thread(new ThreadStart(Test)).Start();
-            }
 
             if( info.targetMethod.Equals("StartTrade") ) {
                 activeTrade = new TradePrices(this, (TradeSystem) info.target);
@@ -91,8 +79,11 @@ namespace ScrollsPost {
             } else if( info.targetMethod.Equals("sendRequest") ) {
                 if( info.arguments[0] is RoomChatMessageMessage ) {
                     RoomChatMessageMessage msg = (RoomChatMessageMessage) info.arguments[0];
-                    if( msg.text.StartsWith("/sp") || msg.text.StartsWith("/scrollspost") ) {
-                        new ConfigGUI(this);
+                    if( msg.text.Equals("/sp") || msg.text.Equals("/scrollspost") || msg.text.Equals("/scrollpost") ) {
+                        new Thread(new ThreadStart(configGUI.Show)).Start();
+
+                        SendMessage("Configuration opened");
+                        return true;
 
                     } else if( msg.text.StartsWith("/pc-1h") ) {
                         new PriceCheck(this, "1-hour", msg.text.Split(new char[] { ' ' }, 2)[1]);
@@ -110,6 +101,19 @@ namespace ScrollsPost {
                         new PriceCheck(this, "1-day", msg.text.Split(new char[] { ' ' }, 2)[1]);
                         return true;
                     }
+               
+                // Do our initial login check
+                } else if( !loggedIn && info.arguments[0] is RoomEnterFreeMessage ) {
+                    loggedIn = true;
+
+                    if( config.NewInstall() || config.VersionBelow(4) ) {
+                        configGUI.ShowIntro();
+                    }
+
+                    // Just updated
+                    if( config.NewInstall() || config.GetInt("version") != Mod.GetVersion() ) {
+                        config.Add("version", Mod.GetVersion());
+                    }
                 }
             }
 
@@ -125,6 +129,11 @@ namespace ScrollsPost {
 
             return;
         }
+
+        public void onReconnect() {
+            return;
+        }
+
 
         public void PopupCancel(string popupType) {
             return;

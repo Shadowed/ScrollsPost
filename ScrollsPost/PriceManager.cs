@@ -33,12 +33,14 @@ namespace ScrollsPost {
 
             try {
                 wc.QueryString.Add("formatting", "1");
-                String result = wc.DownloadString(new Uri("http://api.scrollspost.com/v1/prices/1-day"));
+
+                String period = (String) mod.config.GetWithDefault("data-period", "1-day");
+                String result = wc.DownloadString(new Uri("http://api.scrollspost.com/v1/prices/" + period));
 
                 // Load it up
                 List<APIPriceCheckResult> prices = new JsonReader().Read<List<APIPriceCheckResult>>(result);
                 foreach( APIPriceCheckResult scroll in prices ) {
-                    scrolls.Add(scroll.card_id, scroll); 
+                    scrolls[scroll.card_id] = scroll;
                 }
 
             } catch ( WebException we ) { // eeeeeeeeeeeeeeee

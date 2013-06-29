@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace ScrollsPost {
-    public class ConfigGUI : IOkStringCancelCallback {
+    public class ConfigGUI : IOkCancelCallback, IOkStringCancelCallback {
         private ScrollsPost.Mod mod;
         private ConfigManager config;
         private OptionPopups popups;
@@ -23,23 +23,39 @@ namespace ScrollsPost {
             List<OptionPopups.ConfigOption> options = new List<OptionPopups.ConfigOption>();
             options.Add(new OptionPopups.ConfigOption("Default Period Price", "period"));
 
-            popups.ShowMultiScrollPopup(this, "show-period", "ScrollsPost Configuration", "Pick an option to modify", options);
+            popups.ShowMultiScrollPopup(this, "main", "ScrollsPost Configuration", "Pick an option to modify", options);
         }
 
+        public void ShowIntro() {
+            App.Popups.ShowOkCancel(this, "welcome", "Welcome to ScrollsPost!", "ScrollsPost mod has been installed, you can access the config by typing /sp or /scrollspost.\n\nPrice checking can be activated through /pc <name>.\n\nIf you have any issues, contact us at support@scrollspost.com", "View Config", "Cancel");
+        }
 
         public void PopupCancel(String type) {
-
+            if( type == "period" ) {
+                mod.scrollPrices.Flush();
+            }
         }
 
         public void PopupOk(String type) {
-            
+            if( type == "welcome" ) {
+                Show();
+            }
         }
 
         public void PopupOk(String type, String choice) {
-            if( type == "show-period" ) {
-                BuildPeriodMenu();
+            // Main page
+            if( type == "main" ) {
+                if( choice == "period" ) {
+                    BuildPeriodMenu();
+                }
+            
+            // Period config
             } else if( type == "period" ) {
                 config.Add("data-period", choice);
+            
+            // Go back to the main back
+            } else if( type == "back" && choice == "back" ) {
+                Show();
             }
         }
 

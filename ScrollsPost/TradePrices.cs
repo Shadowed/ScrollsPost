@@ -56,12 +56,18 @@ namespace ScrollsPost {
 
         public void PostUpdateView() {
             foreach( var pair in allCardTypes ) {
-                pair.Value.name = pricedNames[pair.Value.id];
+                if( pricedNames.ContainsKey(pair.Value.id) ) {
+                    pair.Value.name = pricedNames[pair.Value.id];
+                }
             }
         }
 
         // Cards have been loaded in
         private void Loaded(List<Card> allCards1, List<Card> allCards2) {
+            //ptsType.GetMethod("SortLists", BindingFlags.Public | BindingFlags.GetField | BindingFlags.Instance).Invoke(this.player1, null);
+            //ptsType.GetMethod("SortLists", BindingFlags.Public | BindingFlags.GetField | BindingFlags.Instance).Invoke(this.player2, null);
+
+
             foreach( List<Card> cards in new List<Card>[] { allCards1, allCards2 } ) {
                 foreach( Card card in cards ) {
                     CardType type = (CardType) typeof(Card).GetField("type", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(card);
@@ -110,7 +116,7 @@ namespace ScrollsPost {
                     break;
                 }
 
-                Thread.Sleep(5);
+                Thread.Sleep(10);
             }
         }
     }
