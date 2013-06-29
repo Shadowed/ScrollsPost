@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Net;
 using JsonFx.Json;
 
@@ -12,6 +13,11 @@ namespace ScrollsPost {
 
         public PriceManager(Mod mod) {
             this.mod = mod;
+        }
+
+        public void Flush() {
+            nextUpdate = DateTime.UtcNow;
+            new Thread(new ThreadStart(LoadData)).Start();
         }
 
         public void LoadData() {

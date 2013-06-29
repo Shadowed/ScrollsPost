@@ -35,9 +35,6 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\Libraries\Assembly-CSharp.dll</HintPath>
-    </Reference>
     <Reference Include="JsonFx">
       <HintPath>..\Libraries\JsonFx.dll</HintPath>
     </Reference>
@@ -56,6 +53,9 @@
     <Reference Include="UnityEngine">
       <HintPath>..\Libraries\UnityEngine.dll</HintPath>
     </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\Libraries\Assembly-CSharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -64,6 +64,9 @@
     <Compile Include="PriceCheck.cs" />
     <Compile Include="TradePrices.cs" />
     <Compile Include="PriceManager.cs" />
+    <Compile Include="ConfigManager.cs" />
+    <Compile Include="ConfigGUI.cs" />
+    <Compile Include="Extensions\OptionsPopup.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>
@@ -81,5 +84,6 @@
   </ProjectExtensions>
   <ItemGroup>
     <Folder Include="APIResult\" />
+    <Folder Include="Extensions\" />
   </ItemGroup>
 </Project>
