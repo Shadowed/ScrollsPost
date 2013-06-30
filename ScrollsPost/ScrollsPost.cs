@@ -32,7 +32,7 @@ namespace ScrollsPost {
             }
 
             // So we don't need to initialize all this fun stuff later
-            asm = Assembly.LoadFrom(this.OwnFolder() + Path.DirectorySeparatorChar + ".." + Path.DirectorySeparatorChar + ".." + Path.DirectorySeparatorChar + "Assembly-CSharp.dll");
+            asm = Assembly.GetAssembly(typeof(TradeSystem));
 
             scrollPrices = new PriceManager(this);
             config = new ConfigManager(this);
