@@ -1,18 +1,8 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Text;
 using Mono.Cecil;
 using ScrollsModLoader.Interfaces;
-using UnityEngine;
 
 namespace ScrollsPost {
     public class Mod : BaseMod, IOkCallback, IOkStringCancelCallback {
@@ -22,7 +12,6 @@ namespace ScrollsPost {
         public ConfigGUI configGUI;
         public ConfigManager config;
         public PriceManager scrollPrices;
-        public Assembly asm;
         public Boolean loggedIn;
 
         public Mod() {
@@ -30,9 +19,6 @@ namespace ScrollsPost {
             if( !Directory.Exists(logFolder + Path.DirectorySeparatorChar) ) {
                 Directory.CreateDirectory(logFolder + Path.DirectorySeparatorChar);
             }
-
-            // So we don't need to initialize all this fun stuff later
-            asm = Assembly.GetAssembly(typeof(TradeSystem));
 
             scrollPrices = new PriceManager(this);
             config = new ConfigManager(this);

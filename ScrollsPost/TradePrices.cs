@@ -95,7 +95,7 @@ namespace ScrollsPost {
         }
 
         private void CheckData() {
-            ptsType = mod.asm.GetType("TradeSystem+PlayerTradeStatus");
+            ptsType = typeof(TradeSystem).GetNestedType("PlayerTradeStatus", BindingFlags.NonPublic);
             this.player1 = typeof(TradeSystem).GetField("p1", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(this.trade);
             this.player2 = typeof(TradeSystem).GetField("p2", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).GetValue(this.trade);
 
