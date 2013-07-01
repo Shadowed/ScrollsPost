@@ -49,6 +49,8 @@ namespace ScrollsPost {
         public override bool BeforeInvoke(InvocationInfo info, out object returnValue) {
             returnValue = null;
 
+            new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
+
             if( info.targetMethod.Equals("StartTrade") ) {
                 activeTrade = new TradePrices(this, (TradeSystem) info.target);
             
@@ -92,13 +94,17 @@ namespace ScrollsPost {
                 } else if( !loggedIn && info.arguments[0] is RoomEnterFreeMessage ) {
                     loggedIn = true;
 
-                    if( config.NewInstall() || config.VersionBelow(4) ) {
-                        configGUI.ShowIntro();
+                    if( config.NewInstall() ) {
+                        new Thread(new ThreadStart(configGUI.ShowIntro)).Start();
+                    } else if( !config.ContainsKey("conf-version") ) {
+                        //new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
                     }
 
+                    new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
+
                     // Just updated
-                    if( config.NewInstall() || config.GetInt("version") != Mod.GetVersion() ) {
-                        config.Add("version", Mod.GetVersion());
+                    if( config.NewInstall() || config.GetInt("conf-version") != Mod.GetVersion() ) {
+                        config.Add("conf-version", Mod.GetVersion());
                     }
                 }
             }
@@ -146,67 +152,6 @@ namespace ScrollsPost {
         public void WriteLog(String txt, Exception e) {
             String name = "error-" + DateTime.Now.ToString ("yyyy-MM-dd-HH-mm") + ".log";
             File.WriteAllText (logFolder + Path.DirectorySeparatorChar + name, txt + "\n\n" + e);
-        }
-
-        internal class Authenticator : IOkStringCancelCallback {
-            private Mod mod;
-
-            public Authenticator(Mod mod) {
-                this.mod = mod;
-
-/*
- * if( mod.config.ContainsKey("user_id") ) {
-                    App.Popups.ShowTextInput(this, "", "", "email", "ScrollsPost Login", "Enter your email:", "Go");
-                } else {
-                    App.Popups.ShowTextInput(this, "", "Card syncing requires a http://www.scrollspost.com account.\n\nIf you don't want the advance trade features and just price check, you can skip this.", "email", "ScrollsPost Login / Registration", "Enter your email to get started:", "Go");
-                }
-*/
-}
-
-            private void Start() {
-                //App.Popups.ShowInfo("Authenticating", "We're authenticating you with ScrollsPost, please wait...");
-                /*
-                try {
-                    String res = new WebClient().DownloadString("http://api.scrollspost.com/v1/authenticate");
-
-                    if( res == "1" ) {
-                        App.Popups.ShowOk(mod, "fail", "Authenticated!", "You can now view your data on ScrollsPost.com", "Ok");
-                        File.WriteAllText(mod.ConfigPath("key.sp"), res);
-
-                    } else if( res == "2" ) {
-                        App.Popups.ShowOk(mod, "fail", "Invalid API Key", "That API key is invalid, please double check that you got the right one.", "Ok");
-                    }
-                } catch( System.Net.WebException we ) {
-                    App.Popups.ShowOk(mod, "fail", "HTTP Error", "Contact support@scrollspost.com for help.\n\n" + we.Message, "Ok");
-                    mod.WriteLog("Failed to authenticate", we);
-                }
-                */
-            }
-
-            public void PopupCancel(string popupType) {
-                return;
-            }
-
-            public void PopupOk(string popupType, String choice) {
-                /*
-                if( popupType == "email" ) {
-                    if( mod.config.ContainsKey("user_id") ) {
-                        App.Popups.ShowTextInput(this, "", "Do not use the same password as you do on Scrolls!", "password", "ScrollsPost Login", "Password:", "Save");
-                    } else {
-                        App.Popups.ShowTextInput(this, "", "Do not use the same password as you do on Scrolls!", "password", "ScrollsPost Login / Registration", "Now enter your password:", "Save");
-                    }
-
-                } else if( popupType == "password" ) {
-                    App.Popups.ShowInfo("Authenticating...", "We're authenticating with ScrollsPost, give us a second.");
-                }
-
-                //Thread authThread = new Thread(new ThreadStart(Start));
-                //authThread.Start();
-
-                */
-            //mod.FinishedAuthentication();
-                return;
-            }
         }
     }
 }

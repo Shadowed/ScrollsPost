@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading;
 using JsonFx.Json;
 
 namespace ScrollsPost {
@@ -8,6 +9,7 @@ namespace ScrollsPost {
         private ScrollsPost.Mod mod;
         private Dictionary<String, object> config;
         private Boolean newInstall;
+        private Thread writer;
 
         public ConfigManager(ScrollsPost.Mod mod) {
             this.mod = mod;
@@ -30,6 +32,11 @@ namespace ScrollsPost {
                 String data = File.ReadAllText(path("config.json"));
                 config = new JsonReader().Read<Dictionary<String, object>>(data);
 
+                // Temp to get version ifo back on track
+                if( config.ContainsKey("version") ) {
+                    config.Remove("version");
+                }
+
             // Fresh install
             } else {
                 config = new Dictionary<String, object>();
@@ -43,13 +50,20 @@ namespace ScrollsPost {
             File.WriteAllText(path("config.json"), data);
         }
 
+        // Allow multiple options to be queued up and then flushed out
+        private void DelayedWrite() {
+            Thread.Sleep(500);
+            Write();
+            writer = null;
+        }
+
         // Setters & Getters
         public Boolean NewInstall() {
             return newInstall;
         }
 
         public Boolean VersionBelow(int version) {
-            return config.ContainsKey("version") ? (GetInt("version") < version) : true;
+            return config.ContainsKey("conf-version") ? (GetInt("conf-version") < version) : true;
         }
 
         public object Get(String key) {
@@ -80,11 +94,25 @@ namespace ScrollsPost {
             return config.ContainsKey(key);
         }
 
+        public void Remove(String key) {
+            if( !config.ContainsKey(key) )
+                return;
+
+            config.Remove(key);
+
+            if( writer == null ) {
+                writer = new Thread(new ThreadStart(DelayedWrite));
+                writer.Start();
+            }
+        }
+
         public void Add(String key, object value) {
             config[key] = value;
 
-            // Should be buffered/async some point
-            Write();
+            if( writer == null ) {
+                writer = new Thread(new ThreadStart(DelayedWrite));
+                writer.Start();
+            }
         }
     }
 }

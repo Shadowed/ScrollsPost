@@ -67,6 +67,7 @@
     <Compile Include="ConfigManager.cs" />
     <Compile Include="ConfigGUI.cs" />
     <Compile Include="Extensions\OptionsPopup.cs" />
+    <Compile Include="AccountVerifier.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>
