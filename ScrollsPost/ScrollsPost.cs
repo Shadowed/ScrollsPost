@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.IO.Compression;
+using System.Text;
 using System.Threading;
 using Mono.Cecil;
 using ScrollsModLoader.Interfaces;
@@ -9,10 +11,13 @@ namespace ScrollsPost {
         private String logFolder;
         private TradePrices activeTrade;
 
+        public Boolean loggedIn;
         public ConfigGUI configGUI;
         public ConfigManager config;
         public PriceManager scrollPrices;
-        public Boolean loggedIn;
+        public CollectionSync cardSync;
+
+        public String apiURL = "http://api.scrollspost.com/";
 
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
@@ -23,6 +28,7 @@ namespace ScrollsPost {
             scrollPrices = new PriceManager(this);
             config = new ConfigManager(this);
             configGUI = new ConfigGUI(this);
+            cardSync = new CollectionSync(this);
         }
 
         public static string GetName() {
@@ -48,8 +54,6 @@ namespace ScrollsPost {
         }
         public override bool BeforeInvoke(InvocationInfo info, out object returnValue) {
             returnValue = null;
-
-            new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
 
             if( info.targetMethod.Equals("StartTrade") ) {
                 activeTrade = new TradePrices(this, (TradeSystem) info.target);
@@ -97,15 +101,16 @@ namespace ScrollsPost {
                     if( config.NewInstall() ) {
                         new Thread(new ThreadStart(configGUI.ShowIntro)).Start();
                     } else if( !config.ContainsKey("conf-version") ) {
-                        //new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
+                        new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
                     }
-
-                    new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
 
                     // Just updated
-                    if( config.NewInstall() || config.GetInt("conf-version") != Mod.GetVersion() ) {
+                    if( config.NewInstall() || !config.ContainsKey("conf-version") || config.GetInt("conf-version") != Mod.GetVersion() ) {
                         config.Add("conf-version", Mod.GetVersion());
                     }
+
+                    // Check if we need to resync cards
+                    cardSync.PushIfStale();
                 }
             }
 
@@ -152,6 +157,21 @@ namespace ScrollsPost {
         public void WriteLog(String txt, Exception e) {
             String name = "error-" + DateTime.Now.ToString ("yyyy-MM-dd-HH-mm") + ".log";
             File.WriteAllText (logFolder + Path.DirectorySeparatorChar + name, txt + "\n\n" + e);
+        }
+
+        public String CompressString(String text) {
+            /*
+            byte[] bytes = Encoding.UTF8.GetBytes(text);
+            using( var output = new MemoryStream() ) {
+                using( var gzs = new GZipStream(output, CompressionMode.Compress))
+                using( var input = new MemoryStream(bytes) )
+                    input.WriteTo(gzs);           
+
+                return Convert.ToBase64String(output.ToArray());
+            }
+            */
+
+            return text;
         }
     }
 }

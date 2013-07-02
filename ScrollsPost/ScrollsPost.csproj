@@ -68,6 +68,7 @@
     <Compile Include="ConfigGUI.cs" />
     <Compile Include="Extensions\OptionsPopup.cs" />
     <Compile Include="AccountVerifier.cs" />
+    <Compile Include="CollectionSync.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>

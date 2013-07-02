@@ -14,7 +14,6 @@ namespace ScrollsPost {
         private ConfigManager config;
         private OptionPopups popups;
         private AccountVerifier verifier;
-        private String apiURL = "http://localhost:5000/api";
 
         public ConfigGUI(ScrollsPost.Mod mod) {
             this.mod = mod;
@@ -66,8 +65,9 @@ namespace ScrollsPost {
             } else if( type == "back" ) {
                 Show();
             
-            } else if( type == "verifier" && verifier != null ) {
-                verifier.ShowExplanation();
+            //} else if( type == "verifier" && verifier != null ) {
+            //    verifier.ShowExplanation();
+
 
             // Registration & Logging in
             } else if( type == "email" ) {
@@ -123,8 +123,11 @@ namespace ScrollsPost {
                 NameValueCollection form = new NameValueCollection();
                 form["email"] = config.GetString("email");
                 form["password"] = (String) password;
+                form["id"] = App.MyProfile.ProfileInfo.id;
+                form["uid"] = App.MyProfile.ProfileInfo.userUuid;
+                form["name"] = App.MyProfile.ProfileInfo.name;
 
-                byte[] bytes = wc.UploadValues(new Uri(apiURL + "/v1/user"), "POST", form);
+                byte[] bytes = wc.UploadValues(new Uri(mod.apiURL + "/v1/user"), "POST", form);
                 Dictionary<String, object> result = new JsonReader().Read<Dictionary<String, object>>(Encoding.UTF8.GetString(bytes));
 
                 // Failed to register
@@ -138,17 +141,19 @@ namespace ScrollsPost {
 
                  // Save our keys so we don't store passwords
                  } else {
-                    App.Popups.ShowOk(this, "verifier", "Registered!", String.Format("You now have an account with the email {0} on ScrollsPost.com!\n\nYou can login at any time on ScrollsPost.com to manage your card collection as well as set cards for sale or find cards to buy.", config.GetString("email")), "Ok");
+                    App.Popups.ShowOk(this, "done", "Registered!", String.Format("You now have an account with the email {0} on ScrollsPost.com!\n\nYou can login at any time on ScrollsPost.com to manage your card collection as well as set cards for sale or find cards to buy.", config.GetString("email")), "Ok");
 
                     config.Add("user-id", (String) result["user_id"]);
                     config.Add("api-key", (String) result["api_key"]);
                     config.Remove("email");
 
                     if( result.ContainsKey("verif_key") ) {
-                        config.Add("verif-key", (String) result["verif-key"]);
-                        verifier = new AccountVerifier(config);
+                        config.Add("verif-key", (String) result["verif_key"]);
+                        //verifier = new AccountVerifier(config);
                     }
-                 }
+
+                    App.Communicator.sendRequest(new LibraryViewMessage());
+                }
 
             } catch ( WebException we ) {
                 App.Popups.ShowOk(this, "fail", "HTTP Error", "Unable to register due to an HTTP error.\nContact support@scrollspost.com for help.\n\n" + we.Message, "Ok");
@@ -166,8 +171,11 @@ namespace ScrollsPost {
                 NameValueCollection form = new NameValueCollection();
                 form["email"] = config.GetString("email");
                 form["password"] = (String) password;
+                form["id"] = App.MyProfile.ProfileInfo.id;
+                form["uid"] = App.MyProfile.ProfileInfo.userUuid;
+                form["name"] = App.MyProfile.ProfileInfo.name;
 
-                byte[] bytes = wc.UploadValues(new Uri(apiURL + "/v1/user"), "PUT", form);
+                byte[] bytes = wc.UploadValues(new Uri(mod.apiURL + "/v1/user"), "PUT", form);
                 Dictionary<String, object> result = new JsonReader().Read<Dictionary<String, object>>(Encoding.UTF8.GetString(bytes));
 
                 // Failed to login
@@ -181,19 +189,21 @@ namespace ScrollsPost {
 
                     // Save our keys so we don't store passwords
                 } else {
-                    App.Popups.ShowOk(this, "verifier", "Logged In!", "You're now logged into your ScrollsPost.com account!\n\nYour cards will be synced automatically and can be viewed at any time", "Ok");
+                    App.Popups.ShowOk(this, "done", "Logged In!", "You're now logged into your ScrollsPost.com account!\n\nYour cards will be synced automatically and can be viewed at any time", "Ok");
 
                     config.Add("user-id", (String) result["user_id"]);
                     config.Add("api-key", (String) result["api_key"]);
                     config.Remove("email");
 
                     if( result.ContainsKey("verif_key") ) {
-                        config.Add("verif-key", (String) result["verif-key"]);
+                        config.Add("verif-key", (String) result["verif_key"]);
                     }
 
-                    if( config.ContainsKey("verif-key") ) {
-                        verifier = new AccountVerifier(config);
-                    }
+                    //if( config.ContainsKey("verif-key") ) {
+                    //    verifier = new AccountVerifier(config);
+                    //}
+
+                    App.Communicator.sendRequest(new LibraryViewMessage());
                 }
 
             } catch ( WebException we ) {
@@ -214,7 +224,7 @@ namespace ScrollsPost {
                 NameValueCollection form = new NameValueCollection();
                 form["email"] =(String)  email;
 
-                byte[] bytes = wc.UploadValues(new Uri(apiURL + "/v1/user/exists"), "POST", form);
+                byte[] bytes = wc.UploadValues(new Uri(mod.apiURL + "/v1/user/exists"), "POST", form);
                 String result = Encoding.UTF8.GetString(bytes);
 
                 if( result.Equals("2") ) {
@@ -240,7 +250,7 @@ namespace ScrollsPost {
 
         public void ShowAuthPassword(Boolean newAccount, String error=null) {
             if( newAccount ) {
-                App.Popups.ShowTextInput(this, "", String.IsNullOrEmpty(error) ? "Do not use the same password as your Scrolls login!" : error, "password-new", "ScrollsPost Registration", "Enter a password:", "Register");
+                App.Popups.ShowTextInput(this, "", String.IsNullOrEmpty(error) ? "<color=red>Pick a different password from your Scrolls login!</color>" : error, "password-new", "ScrollsPost Registration", "Enter a password:", "Register");
             } else {
                 App.Popups.ShowTextInput(this, "", String.IsNullOrEmpty(error) ? "Enter your ScrollsPost.com account password" : error, "password-login", "ScrollsPost Login", "ScrollsPost Password:", "Login");
             }
