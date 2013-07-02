@@ -32,7 +32,7 @@ namespace ScrollsPost {
                 }
 
                 if( dataPusher == null ) {
-                    dataPusher = new Thread(new ThreadStart(Push));
+                    dataPusher = new Thread(new ThreadStart(DelayedPush));
                     dataPusher.Start();
                 }
 
@@ -58,10 +58,12 @@ namespace ScrollsPost {
         }
 
         // Push collection
-        public void Push(object flag=null) {
-            if( flag != null )
-                Thread.Sleep(10000);
+        public void DelayedPush() {
+            Thread.Sleep(10000);
+            Push();
+        }
 
+        public void Push() {
             // Turn it into something that's not crazy to send over the wire first
             Dictionary<int, Dictionary<String, int>> cards = new Dictionary<int, Dictionary<String, int>>();
 
