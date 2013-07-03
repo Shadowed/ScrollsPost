@@ -79,7 +79,7 @@ namespace ScrollsPost {
         }
 
         public Boolean GetBoolean(String key) {
-            return config[key].Equals("1");
+            return (Boolean)config[key];
         }
 
         public object GetWithDefault(String key, object defValue) {

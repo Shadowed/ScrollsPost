@@ -6,6 +6,9 @@ using System.Threading;
 using Mono.Cecil;
 using ScrollsModLoader.Interfaces;
 
+using System.Reflection;
+using UnityEngine;
+
 namespace ScrollsPost {
     public class Mod : BaseMod, IOkCallback, IOkStringCancelCallback {
         private String logFolder;
@@ -18,6 +21,7 @@ namespace ScrollsPost {
         public CollectionSync cardSync;
 
         public String apiURL = "http://api.scrollspost.com/";
+        //public String apiURL = "http://localhost:5000/api/";
 
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
@@ -36,7 +40,7 @@ namespace ScrollsPost {
         }
 
         public static int GetVersion() {
-            return 4;
+            return 5;
         }
 
         public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version) {
@@ -52,6 +56,7 @@ namespace ScrollsPost {
                 return new MethodDefinition[] { };
             }
         }
+
         public override bool BeforeInvoke(InvocationInfo info, out object returnValue) {
             returnValue = null;
 
@@ -102,6 +107,11 @@ namespace ScrollsPost {
                         new Thread(new ThreadStart(configGUI.ShowIntro)).Start();
                     } else if( !config.ContainsKey("conf-version") ) {
                         new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
+                    } else if( config.VersionBelow(5) ) {
+                        new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object) 4);
+
+                        config.Add("trade", true);
+                        config.Add("sync-notif", false);
                     }
 
                     // Just updated
@@ -111,6 +121,9 @@ namespace ScrollsPost {
 
                     // Check if we need to resync cards
                     cardSync.PushIfStale();
+
+
+
                 }
             }
 

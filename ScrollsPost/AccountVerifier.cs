@@ -2,10 +2,10 @@ using System;
 
 namespace ScrollsPost {
     public class AccountVerifier : IOkCallback {
-        private ConfigManager config;
+        //private ConfigManager config;
 
         public AccountVerifier(ConfigManager config) {
-            this.config = config;
+            //this.config = config;
 
             Start();
         }

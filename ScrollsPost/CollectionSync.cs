@@ -32,7 +32,12 @@ namespace ScrollsPost {
                 }
 
                 if( dataPusher == null ) {
-                    dataPusher = new Thread(new ThreadStart(DelayedPush));
+                    if( config.ContainsKey("last-card-sync") ) {
+                        dataPusher = new Thread(new ThreadStart(DelayedPush));
+                    } else {
+                        dataPusher = new Thread(new ThreadStart(Push));
+                    }
+
                     dataPusher.Start();
                 }
 
@@ -59,7 +64,7 @@ namespace ScrollsPost {
 
         // Push collection
         public void DelayedPush() {
-            Thread.Sleep(10000);
+            Thread.Sleep(5000);
             Push();
         }
 
@@ -98,6 +103,12 @@ namespace ScrollsPost {
 
                 WebClient wc = new WebClient();
                 wc.UploadValues(new Uri(mod.apiURL + "/v1/cards"), "POST", form);
+
+                if( !config.ContainsKey("last-card-sync") ) {
+                    mod.SendMessage("Finished initial collection sync to ScrollsPost. From now on, your collection will auto sync whenever your cards change, you can force a resync by opening up the deck library and waiting about 10 seconds for it to show up on ScrollsPost.");
+                } else if( config.GetBoolean("sync-notif") ) {
+                    mod.SendMessage("Collection synced to ScrollsPost.com.");
+                }
 
             } catch ( WebException we ) {
                 Console.WriteLine("**** ERROR {0}", we.ToString());

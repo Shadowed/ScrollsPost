@@ -13,7 +13,7 @@ namespace ScrollsPost {
         private ScrollsPost.Mod mod;
         private ConfigManager config;
         private OptionPopups popups;
-        private AccountVerifier verifier;
+        //private AccountVerifier verifier;
 
         public ConfigGUI(ScrollsPost.Mod mod) {
             this.mod = mod;
@@ -27,6 +27,8 @@ namespace ScrollsPost {
 
             List<OptionPopups.ConfigOption> options = new List<OptionPopups.ConfigOption>();
             options.Add(new OptionPopups.ConfigOption("Default Period Price", "period"));
+            options.Add(new OptionPopups.ConfigOption("Inline Trade Prices", "trade"));
+            options.Add(new OptionPopups.ConfigOption("Collection Notifications", "sync-notif"));
             options.Add(new OptionPopups.ConfigOption("ScrollsPost Account", "account"));
 
             popups.ShowMultiScrollPopup(this, "main", "ScrollsPost Configuration", "Pick an option to modify", options);
@@ -34,6 +36,13 @@ namespace ScrollsPost {
 
         public void ShowIntro() {
             App.Popups.ShowOkCancel(this, "welcome", "Welcome to ScrollsPost!", "ScrollsPost mod has been installed, you can access the config by typing /sp or /scrollspost.\n\nTo use collection syncing and store management features, you need a ScrollsPost account.\nYou can create one quickly without leaving the game, it only takes a minute.", "Setup Account or Login", "Cancel");
+        }
+
+        public void ShowChanges(object ver) {
+            int version = (int) ver;
+            if( version == 4 ) {
+                App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.4", "Mod updated to v1.0.4\n\n1) You can now disable inline trade prices, handy if your computer is older and you experience lag issues.\n2) You can now be notified every time your collection is synced via a chat message.\n3)Initial syncs will always show a message to reduce confusion.", "Done");
+            }
         }
 
         public void PopupCancel(String type) {
@@ -55,20 +64,21 @@ namespace ScrollsPost {
                     BuildPeriodMenu();
                 } else if( choice == "account" ) {
                     BuildAccountPopup();
+                } else if( choice == "sync-notif" ) {
+                    BuildCollectionNotificationMenu();
+                } else if( choice == "trade" ) {
+                    BuildTradeMenu();
                 }
-            
-                // Period config
+            } else if( type == "trade" ) {
+                config.Add("trade", choice.Equals("True"));
+            } else if( type == "sync-notif" ) {
+                config.Add("sync-notif", choice.Equals("True"));
             } else if( type == "period" ) {
                 config.Add("data-period", choice);
-            
-                // Go back to the main menu
             } else if( type == "back" ) {
                 Show();
-            
             //} else if( type == "verifier" && verifier != null ) {
             //    verifier.ShowExplanation();
-
-
             // Registration & Logging in
             } else if( type == "email" ) {
                 new Thread(new ParameterizedThreadStart(CheckAccount)).Start(choice);
@@ -93,12 +103,30 @@ namespace ScrollsPost {
             popups.ShowMultiScrollPopup(this, "period", "Select Period Type", "What time period to use for prices on the trade window.", SetupOptions((String) config.GetWithDefault("data-period", (object) "1-day"), options));
         }
 
+        private void BuildCollectionNotificationMenu() {
+            OptionPopups.ConfigOption[] options = new OptionPopups.ConfigOption[] {
+                new OptionPopups.ConfigOption("Enable", true),
+                new OptionPopups.ConfigOption("Disable", false)
+            };
+
+            popups.ShowMultiScrollPopup(this, "sync-notif", "Collection Sync Notifications", "Whether you want to be notified every time your collection has been updated on ScrollsPost.com", SetupOptions(config.GetBoolean("sync-notif"), options));
+        }
+
         private void BuildAccountPopup() {
             if( config.ContainsKey("user-id") && config.ContainsKey("api-key") ) {
-                App.Popups.ShowOk(this, "back", "ScrollsPost Account", "You are already logged into ScrollsPost, you don't need to do anything else.", "Back");
+                App.Popups.ShowOk(this, "back", "ScrollsPost Account", "You are already logged into ScrollsPost, you don't need to do anything else.\n\nYour collections will automatically sync to ScrollsPost now.", "Back");
             } else {
                 ShowAuthEmail();   
             }
+        }
+
+        private void BuildTradeMenu() {
+            OptionPopups.ConfigOption[] options = new OptionPopups.ConfigOption[] {
+                new OptionPopups.ConfigOption("Enable", true),
+                new OptionPopups.ConfigOption("Disable", false)
+            };
+
+            popups.ShowMultiScrollPopup(this, "trade", "Inline Trade Prices", "Whether you want to see item prices inline in the trade window.", SetupOptions(config.GetBoolean("trade"), options));
         }
 
         // Helpers
@@ -141,7 +169,7 @@ namespace ScrollsPost {
 
                  // Save our keys so we don't store passwords
                  } else {
-                    App.Popups.ShowOk(this, "done", "Registered!", String.Format("You now have an account with the email {0} on ScrollsPost.com!\n\nYou can login at any time on ScrollsPost.com to manage your card collection as well as set cards for sale or find cards to buy.", config.GetString("email")), "Ok");
+                    App.Popups.ShowOk(this, "done", "Registered!", String.Format("You now have an account with the email {0} on ScrollsPost.com!\n\nYou can login at any time on ScrollsPost.com to manage your card collection as well as set cards for sale or find cards to buy.\n\nYour collection will automatically sync to ScrollsPost now, will let you know when the initial sync has finished in-game.", config.GetString("email")), "Ok");
 
                     config.Add("user-id", (String) result["user_id"]);
                     config.Add("api-key", (String) result["api_key"]);
@@ -189,11 +217,12 @@ namespace ScrollsPost {
 
                     // Save our keys so we don't store passwords
                 } else {
-                    App.Popups.ShowOk(this, "done", "Logged In!", "You're now logged into your ScrollsPost.com account!\n\nYour cards will be synced automatically and can be viewed at any time", "Ok");
+                    App.Popups.ShowOk(this, "done", "Logged In!", "You're now logged into your ScrollsPost.com account!\n\nYour collection will automatically sync to ScrollsPost now, will let you know when the initial sync has finished in-game.", "Ok");
 
                     config.Add("user-id", (String) result["user_id"]);
                     config.Add("api-key", (String) result["api_key"]);
                     config.Remove("email");
+                    config.Remove("last-card-sync");
 
                     if( result.ContainsKey("verif_key") ) {
                         config.Add("verif-key", (String) result["verif_key"]);

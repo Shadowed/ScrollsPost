@@ -162,7 +162,7 @@ namespace ScrollsPost {
                             option.enabled = true;
 
                             // And push it to the callback
-                            this.okStringCallback.PopupOk(this.popupType, (String) option.key);
+                            this.okStringCallback.PopupOk(this.popupType, option.key.ToString());
                         }
                     }
                 }
