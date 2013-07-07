@@ -20,11 +20,10 @@ namespace ScrollsPost {
         public CollectionSync cardSync;
         public ReplayLogger replayLogger;
         public ReplayRunner replayRunner;
-        private ReplayGUI replayGUI;
+        //private ReplayGUI replayGUI;
 
-        //public String apiURL = "http://api.scrollspost.com/";
-        public String apiURL = "http://localhost:5000/api/";
-
+        public String apiURL = "http://api.scrollspost.com/";
+        //public String apiURL = "http://localhost:5000/api/";
 
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
