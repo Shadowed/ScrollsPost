@@ -7,6 +7,7 @@ using JsonFx.Json;
 namespace ScrollsPost {
     public class ConfigManager {
         private ScrollsPost.Mod mod;
+        private String configPath;
         private Dictionary<String, object> config;
         private Boolean newInstall;
         private Thread writer;
@@ -20,22 +21,26 @@ namespace ScrollsPost {
                 Directory.CreateDirectory(path + Path.DirectorySeparatorChar);
             }
 
+            configPath = String.Format("{0}{1}config{1}{2}.json", mod.OwnFolder(), Path.DirectorySeparatorChar, App.MyProfile.ProfileInfo.id);
+
             Load();
         }
 
-        public String path(String file) {
-            return String.Format("{0}/config/{1}/{2}", mod.OwnFolder(), Path.DirectorySeparatorChar, file);
+        public void MigratePath() {
+            String oldPath = mod.OwnFolder() + Path.DirectorySeparatorChar + "config" + Path.DirectorySeparatorChar + "config.json";
+            if( !File.Exists(oldPath) )
+                return;
+
+            File.Move(oldPath, this.configPath);
+
+            newInstall = false;
+            Load();
         }
 
         private void Load() {
-            if( File.Exists(path("config.json")) ) {
-                String data = File.ReadAllText(path("config.json"));
+            if( File.Exists(configPath) ) {
+                String data = File.ReadAllText(configPath);
                 config = new JsonReader().Read<Dictionary<String, object>>(data);
-
-                // Temp to get version ifo back on track
-                if( config.ContainsKey("version") ) {
-                    config.Remove("version");
-                }
 
             // Fresh install
             } else {
@@ -47,7 +52,7 @@ namespace ScrollsPost {
 
         private void Write() {
             String data = new JsonWriter().Write(config);
-            File.WriteAllText(path("config.json"), data);
+            File.WriteAllText(configPath, data);
         }
 
         // Allow multiple options to be queued up and then flushed out

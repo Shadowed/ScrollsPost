@@ -20,12 +20,17 @@ namespace ScrollsPost {
             this.config = mod.config;
         }
 
-        public void Show() {
+        public void Init() {
             if( popups == null ) {
                 popups = new GameObject("OptionPopups").AddComponent<OptionPopups>();
             }
+        }
+
+        public void Show() {
+            Init();
 
             List<OptionPopups.ConfigOption> options = new List<OptionPopups.ConfigOption>();
+            options.Add(new OptionPopups.ConfigOption("Replay Uploading", "replay"));
             options.Add(new OptionPopups.ConfigOption("Default Period Price", "period"));
             options.Add(new OptionPopups.ConfigOption("Inline Trade Prices", "trade"));
             options.Add(new OptionPopups.ConfigOption("Collection Notifications", "sync-notif"));
@@ -42,6 +47,8 @@ namespace ScrollsPost {
             int version = (int) ver;
             if( version == 4 ) {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.4", "Mod updated to v1.0.4\n\n1) You can now disable inline trade prices, handy if your computer is older and you experience lag issues.\n2) You can now be notified every time your collection is synced via a chat message.\n3)Initial syncs will always show a message to reduce confusion.", "Done");
+            } else if( version == 5 ) {
+                App.Popups.ShowOk(this, "show-replay", "ScrollsPost v1.0.5", "Full Replay Support!\n\nScrollsPost now has full replay support with the ability to view both player hands (when available), fast forward to turns, and automatic upload (when enabled).\n\nClick Configure to setup your preferences for Replays.", "Configure");
             }
         }
 
@@ -54,6 +61,9 @@ namespace ScrollsPost {
         public void PopupOk(String type) {
             if( type == "welcome" ) {
                 ShowAuthEmail();
+            } else if( type == "show-replay" ) {
+                Init();
+                BuildReplayMenu();
             }
         }
 
@@ -68,11 +78,15 @@ namespace ScrollsPost {
                     BuildCollectionNotificationMenu();
                 } else if( choice == "trade" ) {
                     BuildTradeMenu();
+                } else if( choice == "replay" ) {
+                    BuildReplayMenu();
                 }
             } else if( type == "trade" ) {
                 config.Add("trade", choice.Equals("True"));
             } else if( type == "sync-notif" ) {
                 config.Add("sync-notif", choice.Equals("True"));
+            } else if( type == "replay" ) {
+                config.Add("replay", choice);
             } else if( type == "period" ) {
                 config.Add("data-period", choice);
             } else if( type == "back" ) {
@@ -90,6 +104,16 @@ namespace ScrollsPost {
         }
         
         // Menu builders
+        private void BuildReplayMenu() {
+            OptionPopups.ConfigOption[] options = new OptionPopups.ConfigOption[] {
+                new OptionPopups.ConfigOption("Ask After Matches", "ask"),
+                new OptionPopups.ConfigOption("Automatically Upload", "auto"),
+                new OptionPopups.ConfigOption("Don't Upload", "never")
+            };
+
+            popups.ShowMultiScrollPopup(this, "replay", "Select Replay Mode", "Configures how ScrollsPost should handle your replays.", SetupOptions((String) config.GetWithDefault("replay", (object) "ask"), options));
+        }
+
         private void BuildPeriodMenu() {
             OptionPopups.ConfigOption[] options = new OptionPopups.ConfigOption[] {
                 new OptionPopups.ConfigOption("Last Hour", "1-hour"),

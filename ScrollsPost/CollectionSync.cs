@@ -56,7 +56,7 @@ namespace ScrollsPost {
             if( !config.ContainsKey("user-id") )
                 return;
 
-            double epoch = (DateTime.UtcNow - (new DateTime(1970, 1, 1))).TotalSeconds;
+            double epoch = mod.TimeSinceEpoch();
             if( !config.ContainsKey("last-card-sync") || (epoch - config.GetInt("last-card-sync")) >= 86400 ) {
                 App.Communicator.sendRequest(new LibraryViewMessage());
             }

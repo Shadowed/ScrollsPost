@@ -69,6 +69,8 @@
     <Compile Include="Extensions\OptionsPopup.cs" />
     <Compile Include="AccountVerifier.cs" />
     <Compile Include="CollectionSync.cs" />
+    <Compile Include="Replay\ReplayLogger.cs" />
+    <Compile Include="Replay\ReplayRunner.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>
@@ -87,5 +89,6 @@
   <ItemGroup>
     <Folder Include="APIResult\" />
     <Folder Include="Extensions\" />
+    <Folder Include="Replay\" />
   </ItemGroup>
 </Project>
