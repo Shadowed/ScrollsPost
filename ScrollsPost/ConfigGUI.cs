@@ -51,7 +51,7 @@ namespace ScrollsPost {
             if( version == 4 ) {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.4", "Mod updated to v1.0.4\n\n1) You can now disable inline trade prices, handy if your computer is older and you experience lag issues.\n2) You can now be notified every time your collection is synced via a chat message.\n3)Initial syncs will always show a message to reduce confusion.", "Done");
             } else if( version == 5 ) {
-                App.Popups.ShowOk(this, "show-replay", "ScrollsPost v1.0.5", "Full Replay Support!\n\nScrollsPost now has full replay support with the ability to view both player hands (when available), fast forward to turns, and automatic upload (when enabled).\n\nClick Configure to setup your preferences for Replays.\n\nYou can view your replays by typing /sp.", "Configure");
+                App.Popups.ShowOk(this, "show-replay", "ScrollsPost v1.0.5 - Replays!", "ScrollsPost now has full replay support with the ability to view both player hands (when available), fast forward to turns, and automatic upload (when enabled).\n\nClick Configure to setup your preferences for Replays.\nYou can view your replays by typing /sp.", "Configure");
             }
         }
 
