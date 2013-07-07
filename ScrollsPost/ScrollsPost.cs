@@ -70,7 +70,7 @@ namespace ScrollsPost {
             // Check if we need to resync cards
             cardSync.PushIfStale();
 
-            replayRunner = new ReplayRunner(this, "/Applications/Scrolls.app/Contents/MacOS/game/MacScrolls.app/Contents/Data/Managed/ModLoader/mods/ScrollsPost/replays/4179766-black.spr");
+            //replayRunner = new ReplayRunner(this, "/Applications/Scrolls.app/Contents/MacOS/game/MacScrolls.app/Contents/Data/Managed/ModLoader/mods/ScrollsPost/replays/4179766-black.spr");
         }
 
         public static string GetName() {

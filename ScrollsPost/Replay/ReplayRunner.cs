@@ -55,8 +55,6 @@ namespace ScrollsPost {
             this.speedButtonStyle = new GUIStyle(this.buttonStyle);
             this.speedButtonStyle.fontSize = (int)Math.Round(this.buttonStyle.fontSize * 0.95f);
 
-            Console.WriteLine("********** STARTING");
-
             playerThread = new Thread(new ThreadStart(Start));
             playerThread.Start();
         }
@@ -80,14 +78,16 @@ namespace ScrollsPost {
             // Container
             Color color = GUI.color;
             GUI.color = new Color(0f, 0f, 0f, 1f);
-            Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.16f);
+            //Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.16f);
+            Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.06f);
             GUI.DrawTexture(container, ResourceManager.LoadTexture("Shared/blackFiller"));
             GUI.color = color;
 
             GUI.depth = depth - 2;
 
             // Draw the header
-            Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.16f);
+            //Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.16f);
+            Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.50f);
 
             int fontSize = GUI.skin.label.fontSize;
             color = GUI.skin.label.normal.textColor;
@@ -98,7 +98,8 @@ namespace ScrollsPost {
             GUI.skin.label.normal.textColor = color;
 
             // Start/Pause
-            pos = new Rect(container.x * 1.06f, pos.y + pos.height + 10f, container.width * 0.90f, container.height * 0.20f);
+            //pos = new Rect(container.x * 1.06f, pos.y + pos.height + 10f, container.width * 0.90f, container.height * 0.20f);
+            pos = new Rect(container.x * 1.06f, pos.y + pos.height - 6f, container.width * 0.90f, container.height * 0.0f);
             if( GUI.Button(pos, paused ? "Play" : "Pause", this.buttonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
 
