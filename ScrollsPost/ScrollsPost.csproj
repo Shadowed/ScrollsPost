@@ -71,6 +71,7 @@
     <Compile Include="CollectionSync.cs" />
     <Compile Include="Replay\ReplayLogger.cs" />
     <Compile Include="Replay\ReplayRunner.cs" />
+    <Compile Include="Replay\ReplayGUI.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>

@@ -17,7 +17,7 @@ namespace ScrollsPost {
             }
         }
 
-        private enum PopupType { NONE, MULTI_SCROLL }
+        private enum PopupType { NONE, MULTI_SCROLL, REPLAY_SCROLL }
 
         private Vector2 optionScroll = Vector2.zero;
         private GUISkin regularUISkin;
@@ -77,6 +77,23 @@ namespace ScrollsPost {
             this.okText = popupType.Equals("main") ? null : "Back";
         }
 
+        public void ShowReplayScrollPopup(IOkStringCancelCallback callback, String popupType, String header, String description, List<ConfigOption> configOptions) {
+            this.ShowPopup(PopupType.REPLAY_SCROLL);
+
+            this.popupType = popupType;
+            this.optionScroll = Vector2.zero;
+
+            this.okStringCallback = callback;
+            this.cancelCallback = callback;
+
+            this.configOptions = configOptions;
+
+            this.header = header;
+            this.description = description;
+            this.cancelText = "Done";
+            this.okText = "Play";
+        }
+
         private void OnGUI() {
             if( this.currentPopupType == PopupType.NONE )
                 return;
@@ -105,7 +122,7 @@ namespace ScrollsPost {
                 GUI.skin.label.wordWrap = wordWrap;
             }
 
-            if( this.currentPopupType == PopupType.MULTI_SCROLL ) {
+            if( this.currentPopupType == PopupType.MULTI_SCROLL || this.currentPopupType == PopupType.REPLAY_SCROLL ) {
                 this.DrawMultiScroll(rect2);
             }
 
@@ -170,20 +187,56 @@ namespace ScrollsPost {
 
             GUI.EndScrollView();
 
-            GUI.skin.label.fontSize = 8 + Screen.height / 72;
-            Rect r2 = new Rect(popupInner.xMax - (float)Screen.height * 0.2f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.2f, (float)Screen.height * 0.05f);
-            GUI.skin.button.fontSize = 10 + Screen.height / 60;
+            if( this.currentPopupType == PopupType.REPLAY_SCROLL ) {
+                GUI.skin.label.fontSize = 8 + Screen.height / 72;
+                Rect r2 = new Rect(popupInner.xMax - (float)Screen.height * 0.1f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.1f, (float)Screen.height * 0.05f);
+                GUI.skin.button.fontSize = 10 + Screen.height / 60;
 
-            if( this.GUIButton(r2, this.cancelText) ){
-                this.HidePopup();
-                this.cancelCallback.PopupCancel(this.popupType);
-            }
-
-            if( !String.IsNullOrEmpty(this.okText) ) {
-                Rect r3 = new Rect(popupInner.xMax - (float)Screen.height * 0.740f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.2f, (float)Screen.height * 0.05f);
-                if( this.GUIButton(r3, this.okText) ) {
+                if( this.GUIButton(r2, "Done") ) {
                     this.HidePopup();
-                    this.okStringCallback.PopupOk("back", "back");
+                    this.cancelCallback.PopupCancel(this.popupType);
+                }
+
+                Rect r3 = new Rect(popupInner.xMax - (float)Screen.height * 0.740f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.1f, (float)Screen.height * 0.05f);
+                if( this.GUIButton(r3, "Play") ) {
+                    this.HidePopup();
+                    this.okStringCallback.PopupOk(this.popupType, "play");
+                }
+
+                r3 = new Rect(r3.x + r3.width + 6f, r3.y, r3.width * 2f, r3.height);
+                if( this.GUIButton(r3, "Play From File") ) {
+                    this.HidePopup();
+                    this.okStringCallback.PopupOk(this.popupType, "play-file");
+                }
+
+                //r3 = new Rect(r3.x + r3.width + 6f, r3.y, r3.width, r3.height);
+                //if( this.GUIButton(r3, "Play From URL") ) {
+                //    this.HidePopup();
+                //    this.okStringCallback.PopupOk(this.popupType, "play-url");
+                //}
+
+                //r3 = new Rect(r3.x + r3.width + 12f, r3.y, r3.width * 0.50f, r3.height);
+                //if( this.GUIButton(r3, "Upload") ) {
+                //    this.HidePopup();
+                //    this.okStringCallback.PopupOk(this.popupType, "upload");
+                //}
+
+            } else {
+                GUI.skin.label.fontSize = 8 + Screen.height / 72;
+                Rect r2 = new Rect(popupInner.xMax - (float)Screen.height * 0.2f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.2f, (float)Screen.height * 0.05f);
+                GUI.skin.button.fontSize = 10 + Screen.height / 60;
+
+                if( this.GUIButton(r2, this.cancelText) ) {
+                    this.HidePopup();
+                    this.cancelCallback.PopupCancel(this.popupType);
+                }
+
+                if( !String.IsNullOrEmpty(this.okText) ) {
+                    Rect r3 = new Rect(popupInner.xMax - (float)Screen.height * 0.740f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.2f, (float)Screen.height * 0.05f);
+                    if( this.GUIButton(r3, this.okText) ) {
+                        this.HidePopup();
+                        this.okStringCallback.PopupOk("back", "back");
+                    }
                 }
             }
 

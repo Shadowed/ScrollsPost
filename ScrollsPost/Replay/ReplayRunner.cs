@@ -18,6 +18,7 @@ namespace ScrollsPost {
         private Thread playerThread;
         private Dictionary<String, object> metadata;
 
+        private Boolean finished = false;
         private Boolean paused = false;
         private Boolean wasPaused = false;
         private Boolean internalPause = false;
@@ -56,7 +57,7 @@ namespace ScrollsPost {
             this.buttonStyle.active.textColor = new Color(0.60f, 0.60f, 0.60f, 1f);
 
             this.speedButtonStyle = new GUIStyle(this.buttonStyle);
-            this.speedButtonStyle.fontSize = (int)Math.Round(this.buttonStyle.fontSize * 0.95f);
+            this.speedButtonStyle.fontSize = (int)Math.Round(this.buttonStyle.fontSize * 0.80f);
 
             playerThread = new Thread(new ThreadStart(Start));
             playerThread.Start();
@@ -215,10 +216,17 @@ namespace ScrollsPost {
             }
         }
 
+        // Stop a replay
+        public void Stop() {
+            finished = true;
+            playerThread.Abort();
+            App.Communicator.setData("");
+
+            SceneLoader.loadScene("_Lobby");
+        }
+
         // Initial replay start
         private void Start() {
-            Thread.Sleep(1000);
-
             SceneLoader.loadScene("_BattleModeView");
             reverseField = typeof(iTween).GetField("reverse", BindingFlags.NonPublic | BindingFlags.Instance);
             percentField = typeof(iTween).GetField("percentage", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -255,7 +263,7 @@ namespace ScrollsPost {
             }
 
             while( primary.Peek() > 0 ) {
-                if( rewind ) {
+                if( rewind || finished ) {
                     break;
                 }
 
@@ -271,6 +279,10 @@ namespace ScrollsPost {
                     Boolean seeking = true;
 
                     while( secondary.Peek() > 0 ) {
+                        if( finished ) {
+                            break;
+                        }
+
                         line = secondary.ReadLine();
                         // Find the part where the new turn is
                         if( seeking && line.Contains(newTurn) ) {
@@ -342,7 +354,7 @@ namespace ScrollsPost {
 
             if( line.Contains("TurnBegin") ) {
                 internalPause = true;
-                while( internalPause ) {
+                while( internalPause && !finished ) {
                     Thread.Sleep(10);
                 }
             }

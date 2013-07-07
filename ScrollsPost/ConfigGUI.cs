@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Text;
 using System.Net;
+using System.IO;
 using JsonFx.Json;
 using UnityEngine;
 
@@ -13,6 +14,7 @@ namespace ScrollsPost {
         private ScrollsPost.Mod mod;
         private ConfigManager config;
         private OptionPopups popups;
+        private String replayPath;
         //private AccountVerifier verifier;
 
         public ConfigGUI(ScrollsPost.Mod mod) {
@@ -30,6 +32,7 @@ namespace ScrollsPost {
             Init();
 
             List<OptionPopups.ConfigOption> options = new List<OptionPopups.ConfigOption>();
+            options.Add(new OptionPopups.ConfigOption("Replay List", "replay-list"));
             options.Add(new OptionPopups.ConfigOption("Replay Uploading", "replay"));
             options.Add(new OptionPopups.ConfigOption("Default Period Price", "period"));
             options.Add(new OptionPopups.ConfigOption("Inline Trade Prices", "trade"));
@@ -48,7 +51,7 @@ namespace ScrollsPost {
             if( version == 4 ) {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.4", "Mod updated to v1.0.4\n\n1) You can now disable inline trade prices, handy if your computer is older and you experience lag issues.\n2) You can now be notified every time your collection is synced via a chat message.\n3)Initial syncs will always show a message to reduce confusion.", "Done");
             } else if( version == 5 ) {
-                App.Popups.ShowOk(this, "show-replay", "ScrollsPost v1.0.5", "Full Replay Support!\n\nScrollsPost now has full replay support with the ability to view both player hands (when available), fast forward to turns, and automatic upload (when enabled).\n\nClick Configure to setup your preferences for Replays.", "Configure");
+                App.Popups.ShowOk(this, "show-replay", "ScrollsPost v1.0.5", "Full Replay Support!\n\nScrollsPost now has full replay support with the ability to view both player hands (when available), fast forward to turns, and automatic upload (when enabled).\n\nClick Configure to setup your preferences for Replays.\n\nYou can view your replays by typing /sp.", "Configure");
             }
         }
 
@@ -64,6 +67,8 @@ namespace ScrollsPost {
             } else if( type == "show-replay" ) {
                 Init();
                 BuildReplayMenu();
+            } else if( type == "show-replay-list" ) {
+                BuildReplayListMenu();
             }
         }
 
@@ -80,6 +85,8 @@ namespace ScrollsPost {
                     BuildTradeMenu();
                 } else if( choice == "replay" ) {
                     BuildReplayMenu();
+                } else if( choice == "replay-list" ) {
+                    BuildReplayListMenu();
                 }
             } else if( type == "trade" ) {
                 config.Add("trade", choice.Equals("True"));
@@ -91,6 +98,28 @@ namespace ScrollsPost {
                 config.Add("data-period", choice);
             } else if( type == "back" ) {
                 Show();
+            } else if( type == "pick-replay" ) {
+                if( choice == "play" ) {
+                    if( !String.IsNullOrEmpty(replayPath) ) {
+                        this.mod.StartReplayRunner(replayPath);
+                    } else {
+                        App.Popups.ShowOk(this, "show-replay-list", "No Replay Chosen", "You must click a replay from the list before you can play one.", "Ok");
+                    }
+
+                } else if( choice == "upload" ) {
+                    if( !String.IsNullOrEmpty(replayPath) ) {
+                        UploadReplay(replayPath);
+                    } else {
+                        App.Popups.ShowOk(this, "show-replay-list", "No Replay Chosen", "You must click a replay from the list before you can upload it.", "Ok");
+                    }
+                } else if( choice == "play-file" ) {
+                    PlayReplayFromFile();
+                } else if( choice == "play-url" ) {
+                    PlayReplayFromURL();
+                } else {
+                    replayPath = choice;
+                }
+
             //} else if( type == "verifier" && verifier != null ) {
             //    verifier.ShowExplanation();
             // Registration & Logging in
@@ -104,6 +133,32 @@ namespace ScrollsPost {
         }
         
         // Menu builders
+        private void BuildReplayListMenu() {
+            List<OptionPopups.ConfigOption> options = new List<OptionPopups.ConfigOption>();
+
+            foreach( String path in Directory.GetFiles(this.mod.replayLogger.replayFolder) ) {
+                if( !path.EndsWith(".spr") )
+                    continue;
+
+                using( StreamReader sr = new StreamReader(path) ) {
+                    String line = sr.ReadLine();
+                    if( line.StartsWith("metadata") ) {
+                        line = line.Split(new char[] { '|' }, 2)[1];
+                        Dictionary<String, object> metadata = new JsonReader().Read<Dictionary<String, object>>(line);
+
+                        DateTime played = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                        played = played.AddSeconds(Convert.ToDouble(metadata["played-at"]));
+                        played = TimeZone.CurrentTimeZone.ToLocalTime(played);
+
+                        String label = String.Format("{0} {1} - {2}\n{3} vs {4}", played.ToShortDateString(), played.ToShortTimeString(), metadata["deck"], metadata["white-name"], metadata["black-name"]);
+                        options.Add(new OptionPopups.ConfigOption(label, path, path.Equals(replayPath)));
+                    }
+                }
+            }
+
+            popups.ShowReplayScrollPopup(this, "pick-replay", "Select Replay", "Pick a replay to watch, share or delete.", options);
+        }
+
         private void BuildReplayMenu() {
             OptionPopups.ConfigOption[] options = new OptionPopups.ConfigOption[] {
                 new OptionPopups.ConfigOption("Ask After Matches", "ask"),
@@ -162,6 +217,26 @@ namespace ScrollsPost {
             }
 
             return list;
+        }
+
+        // Replay management
+        public void UploadReplay(String path) {
+
+        }
+
+        public void PlayReplayFromFile() {
+            String path = this.mod.OpenFileDialog();
+            if( path.EndsWith(".sgr") ) {
+                App.Popups.ShowOk(this, "show-replay-list", "Not ScrollsPost Replay", "You cannot play an .sgr replay with this mod without converting it first, contact us at support@scrollspost.com and will help you out.", "Ok");
+            } else if( !path.EndsWith(".spr") ) {
+                App.Popups.ShowOk(this, "show-replay-list", "Not ScrollsPost Replay", "A valid ScrollsPost replay will end with .spr, this is not a valid replay.", "Ok");
+            } else {
+                this.mod.StartReplayRunner(path);
+            }
+        }
+
+        public void PlayReplayFromURL() {
+
         }
 
         // Authentication flow

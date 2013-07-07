@@ -10,7 +10,7 @@ using System.IO.Compression;
 namespace ScrollsPost {
     public class ReplayLogger : IOkCancelCallback, ICommListener {
         private ScrollsPost.Mod mod;
-        private String replayFolder;
+        public String replayFolder;
         private String replayPath;
         private String currentVersion;
         private double lastMessage;
@@ -61,6 +61,9 @@ namespace ScrollsPost {
                 metadata["perspective"] = info.color == TileColor.white ? "white" : "black";
                 metadata["white-id"] = info.getPlayerProfileId(TileColor.white);
                 metadata["black-id"] = info.getPlayerProfileId(TileColor.black);
+                metadata["white-name"] = info.getPlayerName(TileColor.white);
+                metadata["black-name"] = info.getPlayerName(TileColor.black);
+                metadata["deck"] = info.deck;
                 metadata["game-id"] = info.gameId.ToString();
                 metadata["winner"] = "SPWINNERSP";
                 metadata["played-at"] = (int) lastMessage;

@@ -20,6 +20,7 @@ namespace ScrollsPost {
         public CollectionSync cardSync;
         public ReplayLogger replayLogger;
         public ReplayRunner replayRunner;
+        private ReplayGUI replayGUI;
 
         //public String apiURL = "http://api.scrollspost.com/";
         public String apiURL = "http://localhost:5000/api/";
@@ -38,6 +39,7 @@ namespace ScrollsPost {
             configGUI = new ConfigGUI(this);
             cardSync = new CollectionSync(this);
             replayLogger = new ReplayLogger(this);
+            //replayGUI = new ReplayGUI(this);
 
             // Config migration + upgrades
             config.MigratePath();
@@ -69,8 +71,6 @@ namespace ScrollsPost {
 
             // Check if we need to resync cards
             cardSync.PushIfStale();
-
-            //replayRunner = new ReplayRunner(this, "/Applications/Scrolls.app/Contents/MacOS/game/MacScrolls.app/Contents/Data/Managed/ModLoader/mods/ScrollsPost/replays/4170740-white.spr");
         }
 
         public static string GetName() {
@@ -96,7 +96,10 @@ namespace ScrollsPost {
                     scrollsTypes["iTween"].Methods.GetMethod("UpdatePercentage")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("OnGUI")[0],
                     scrollsTypes["BattleModeUI"].Methods.GetMethod("Init")[0],
-                    scrollsTypes["BattleModeUI"].Methods.GetMethod("ShowEndTurn")[0]
+                    scrollsTypes["BattleModeUI"].Methods.GetMethod("ShowEndTurn")[0],
+                    scrollsTypes["GUIBattleModeMenu"].Methods.GetMethod("toggleMenu")[0],
+
+                    //scrollsTypes["ProfileMenu"].Methods.GetMethod("Start")[0],
                 };
             } catch( Exception ex ) {
                 Console.WriteLine("****** HOOK FAILURE {0}", ex.ToString());
@@ -146,12 +149,19 @@ namespace ScrollsPost {
                         return true;
                     }
                
-                // Do our initial login check
+                    // Do our initial login check
                 } else if( !loggedIn && info.arguments[0] is RoomEnterFreeMessage ) {
                     loggedIn = true;
                     Init();
                 }
-                
+
+            // Replay UI
+            //} else if( info.targetMethod.Equals("Start") && App.SceneValues.profilePage.isMe() ) {
+            //    replayGUI.Show();
+           
+            //} else if( info.targetMethod.Equals("drawEditButton") ) {
+            //    replayGUI.Hide();
+
             // Replay handler
             } else if( replayRunner != null ) {
                 if( info.targetMethod.Equals("handleNextMessage") ) {
@@ -169,6 +179,12 @@ namespace ScrollsPost {
                         return true;
                     }
                 
+                } else if( info.targetMethod.Equals("toggleMenu") ) {
+                    replayRunner.Stop();
+                    replayRunner = null;
+                    returnValue = null;
+                    return true;
+
                 } else if( info.targetMethod.Equals("effectDone") ) {
                     replayRunner.OnBattleEffectDone(info);
 
@@ -232,6 +248,14 @@ namespace ScrollsPost {
 
         public double TimeSinceEpoch() {
             return (DateTime.UtcNow - (new DateTime(1970, 1, 1))).TotalSeconds;
+        }
+
+        public void StartReplayRunner(String path) {
+            replayRunner = new ReplayRunner(this, path);
+        }
+
+        public String OpenFileDialog() {
+            return modAPI.FileOpenDialog();
         }
 
         public String CompressString(String text) {
