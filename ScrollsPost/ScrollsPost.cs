@@ -70,7 +70,7 @@ namespace ScrollsPost {
             // Check if we need to resync cards
             cardSync.PushIfStale();
 
-            //replayRunner = new ReplayRunner(this, "/Applications/Scrolls.app/Contents/MacOS/game/MacScrolls.app/Contents/Data/Managed/ModLoader/mods/ScrollsPost/replays/4179766-black.spr");
+            //replayRunner = new ReplayRunner(this, "/Applications/Scrolls.app/Contents/MacOS/game/MacScrolls.app/Contents/Data/Managed/ModLoader/mods/ScrollsPost/replays/4170740-white.spr");
         }
 
         public static string GetName() {
@@ -92,6 +92,7 @@ namespace ScrollsPost {
 
                     scrollsTypes["Communicator"].Methods.GetMethod("handleNextMessage")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("addDelay")[0],
+                    scrollsTypes["BattleMode"].Methods.GetMethod("effectDone")[0],
                     scrollsTypes["iTween"].Methods.GetMethod("UpdatePercentage")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("OnGUI")[0],
                     scrollsTypes["BattleModeUI"].Methods.GetMethod("Init")[0],
@@ -145,7 +146,7 @@ namespace ScrollsPost {
                         return true;
                     }
                
-                    // Do our initial login check
+                // Do our initial login check
                 } else if( !loggedIn && info.arguments[0] is RoomEnterFreeMessage ) {
                     loggedIn = true;
                     Init();
@@ -167,6 +168,9 @@ namespace ScrollsPost {
                         returnValue = null;
                         return true;
                     }
+                
+                } else if( info.targetMethod.Equals("effectDone") ) {
+                    replayRunner.OnBattleEffectDone(info);
 
                 //} else if( info.targetMethod.Equals("Init") ) {
                 //    replayRunner.OnBattleUIInit(info);

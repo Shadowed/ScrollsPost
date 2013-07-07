@@ -20,6 +20,10 @@ namespace ScrollsPost {
 
         private Boolean paused = false;
         private Boolean wasPaused = false;
+        private Boolean internalPause = false;
+        private Boolean rewind = false;
+        private int currentRound = 0;
+        private int seekRound = 0;
         private float speed = 1;
 
         private GUIStyle buttonStyle;
@@ -28,6 +32,7 @@ namespace ScrollsPost {
         private MethodInfo deselectMethod;
         private FieldInfo reverseField;
         private FieldInfo percentField;
+        private FieldInfo effectField;
 
         public ReplayRunner(ScrollsPost.Mod mod, String path) {
             //this.mod = mod;
@@ -41,8 +46,6 @@ namespace ScrollsPost {
             }
 
             GUISkin skin = (GUISkin)Resources.Load("_GUISkins/LobbyMenu");
-            //this.highlightedButtonStyle = new GUIStyle(this.regularUISkin.button);
-            //this.highlightedButtonStyle.normal.background = this.highlightedButtonStyle.active.background;
             this.buttonStyle = skin.button;
             this.buttonStyle.normal.background = this.buttonStyle.hover.background;
             this.buttonStyle.normal.textColor = new Color(1f, 1f, 1f, 1f);
@@ -78,16 +81,16 @@ namespace ScrollsPost {
             // Container
             Color color = GUI.color;
             GUI.color = new Color(0f, 0f, 0f, 1f);
-            //Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.16f);
-            Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.06f);
+            Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.16f);
+            //Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.06f);
             GUI.DrawTexture(container, ResourceManager.LoadTexture("Shared/blackFiller"));
             GUI.color = color;
 
             GUI.depth = depth - 2;
 
             // Draw the header
-            //Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.16f);
-            Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.50f);
+            Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.16f);
+            //Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.50f);
 
             int fontSize = GUI.skin.label.fontSize;
             color = GUI.skin.label.normal.textColor;
@@ -98,8 +101,8 @@ namespace ScrollsPost {
             GUI.skin.label.normal.textColor = color;
 
             // Start/Pause
-            //pos = new Rect(container.x * 1.06f, pos.y + pos.height + 10f, container.width * 0.90f, container.height * 0.20f);
-            pos = new Rect(container.x * 1.06f, pos.y + pos.height - 6f, container.width * 0.90f, container.height * 0.0f);
+            pos = new Rect(container.x * 1.06f, pos.y + pos.height + 10f, container.width * 0.90f, container.height * 0.20f);
+            //pos = new Rect(container.x * 1.06f, pos.y + pos.height - 6f, container.width * 0.90f, container.height * 0.0f);
             if( GUI.Button(pos, paused ? "Play" : "Pause", this.buttonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
 
@@ -108,17 +111,24 @@ namespace ScrollsPost {
             }
 
             // Go to Round
-            //pos = new Rect(pos.x, pos.y + pos.height + 8f, pos.width, pos.height);
-            //if( GUI.Button(pos, "Go To Round", this.buttonStyle) ) {
-            //    App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
-            //    App.Popups.ShowTextInput(this, "", "Can be a round that has always passed or one in the future.", "round", "Round Seek", "Enter a Round to Go To:", "Seek");
-            //}
+            pos = new Rect(pos.x, pos.y + pos.height + 8f, pos.width, pos.height);
+
+            String label = "Go To Round";
+            if( rewind ) {
+                label = "Rewinding...";
+            } else if( seekRound > 0 ) {
+                label = String.Format("Seeking {0} of {1}", currentRound, seekRound);
+            }
+
+            if( GUI.Button(pos, label, this.buttonStyle) ) {
+                App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
+                App.Popups.ShowTextInput(this, "", "Can be a round that has always passed or one in the future.", "round", "Round Seek", "Enter a Round to Go To:", "Seek");
+            }
 
             // Speed changes
-            /*
-             * pos = new Rect(pos.x, pos.y + pos.height + 8f, pos.width * 0.32f, pos.height);
+            pos = new Rect(pos.x, pos.y + pos.height + 8f, pos.width * 0.32f, pos.height);
 
-            float newSpeed = speed >= 0.50f ? speed - 0.25f : 0.25f;
+            float newSpeed = speed >= 0.50f ? Math.Min(0.75f, speed - 0.25f) : 0.25f;
 
             if( GUI.Button(pos, String.Format("{0}%", newSpeed * 100), this.speedButtonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
@@ -131,14 +141,14 @@ namespace ScrollsPost {
                 speed = 1;
             }
 
-            newSpeed = speed <= 1.75f ? speed + 0.25f : 2f;
+            newSpeed = speed <= 1.75f ? Math.Max(speed + 0.25f, 1.25f) : 2f;
 
             pos = new Rect(pos.x + pos.width + 2f, pos.y, pos.width, pos.height);
             if( GUI.Button(pos, String.Format("{0}%", newSpeed * 100), this.speedButtonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 speed = newSpeed;
             }
-            */
+
 
             GUI.depth = depth;
         }
@@ -152,11 +162,23 @@ namespace ScrollsPost {
         }
         
         public Boolean OnBattleDelay(InvocationInfo info) {
-            return speed > 1.5;
+            return seekRound > 0 || speed > 1.5f;
+        }
+
+        public void OnBattleEffectDone(InvocationInfo info) {
+            EffectMessage msg = (EffectMessage)effectField.GetValue(info.target);
+            if( msg.type == "TurnBegin" ) {
+                currentRound = (int)Math.Round((msg as EMTurnBegin).turn / 2f);
+                if( currentRound == seekRound ) {
+                    seekRound = 0;
+                }
+
+                internalPause = false;
+            }
         }
 
         public void OnTweenUpdatePercentage(InvocationInfo info) {
-            if( speed > 1.5 ) {
+            if( seekRound > 0 || speed > 1.5f ) {
                 if( (Boolean) reverseField.GetValue(info.target) ) {
                     percentField.SetValue(info.target, 0f);
                 } else {
@@ -166,8 +188,11 @@ namespace ScrollsPost {
         }
 
         private void Delay(int ms) {
-            // While seeking, reduce the delay
-            ms = (int)Math.Round(ms * speed);
+            if( seekRound > 0 ) {
+                ms = Math.Min(ms, 50);
+            } else {
+                ms = (int)Math.Round(ms * speed);
+            }
 
             Thread.Sleep(ms);
         }
@@ -182,8 +207,13 @@ namespace ScrollsPost {
         }
 
         public void PopupOk(String type, String choice) {
+            if( type == "round" ) {
+                seekRound = Convert.ToInt16(choice);
+                if( seekRound <= currentRound ) {
+                    rewind = true;
+                }
+            }
         }
-
 
         // Initial replay start
         private void Start() {
@@ -193,6 +223,7 @@ namespace ScrollsPost {
             reverseField = typeof(iTween).GetField("reverse", BindingFlags.NonPublic | BindingFlags.Instance);
             percentField = typeof(iTween).GetField("percentage", BindingFlags.NonPublic | BindingFlags.Instance);
             deselectMethod = typeof(BattleMode).GetMethod("deselectAllTiles", BindingFlags.Instance | BindingFlags.NonPublic);
+            effectField = typeof(BattleMode).GetField("currentEffect", BindingFlags.NonPublic | BindingFlags.Instance);
 
             using( StreamReader primary = new StreamReader(this.replayPrimaryPath) ) {
                 if( String.IsNullOrEmpty(this.replaySecondaryPath) ) {
@@ -224,6 +255,10 @@ namespace ScrollsPost {
             }
 
             while( primary.Peek() > 0 ) {
+                if( rewind ) {
+                    break;
+                }
+
                 line = primary.ReadLine();
 
                 // Secondaries turn
@@ -277,6 +312,13 @@ namespace ScrollsPost {
 
                 ParseLine(primaryID, line);
             }
+
+            if( rewind ) {
+                rewind = false;
+                currentRound = 0;
+
+                Start();
+            }
         }
 
         // Parse a single line from the replay
@@ -297,6 +339,13 @@ namespace ScrollsPost {
 
             wasPaused = false;
             msgPending = true;
+
+            if( line.Contains("TurnBegin") ) {
+                internalPause = true;
+                while( internalPause ) {
+                    Thread.Sleep(10);
+                }
+            }
         }
 
 
