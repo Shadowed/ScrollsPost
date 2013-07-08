@@ -16,6 +16,7 @@ namespace ScrollsPost {
         private double lastMessage;
         private Boolean inGame;
         private Boolean enabled;
+        private StreamWriter sw;
 
         public ReplayLogger(ScrollsPost.Mod mod) {
             this.mod = mod;
@@ -72,9 +73,9 @@ namespace ScrollsPost {
                 replayPath = replayFolder + Path.DirectorySeparatorChar + String.Format("{0}-{1}.spr", metadata["game-id"], metadata["perspective"]);
 
                 // Store metadata for easier parsing
-                using( StreamWriter sw = File.AppendText(replayPath) ) {
-                    sw.WriteLine(String.Format("metadata|{0}", new JsonWriter().Write(metadata)));
-                }
+                int buffer = mod.config.ContainsKey("buffer") ? mod.config.GetInt("buffer") : 4096;
+                sw = new StreamWriter(replayPath, true, Encoding.UTF8, buffer);
+                sw.WriteLine(String.Format("metadata|{0}", new JsonWriter().Write(metadata)));
 
             // Junk we can ignore
             } else if( msg is BattleRejoinMessage || msg is FailMessage || msg is OkMessage ) {
@@ -85,19 +86,23 @@ namespace ScrollsPost {
                 return;
 
             double epoch = mod.TimeSinceEpoch();
-            using( StreamWriter sw = File.AppendText(replayPath) ) {
-                sw.WriteLine(String.Format("elapsed|{0}|{1}", Math.Round(epoch - lastMessage, 2), msg.getRawText().Replace("\n", "")));
-            }
-
+            sw.WriteLine(String.Format("elapsed|{0}|{1}", Math.Round(epoch - lastMessage, 2), msg.getRawText().Replace("\n", "")));
+        
             // Game over
             if( msg is NewEffectsMessage && msg.getRawText().Contains("EndGame") ) {
                 inGame = false;
 
-                // Bit of a hack, need to improve
+                // Finish off
+                sw.Flush();
+                sw.Close();
+                sw = null;
+
+                // Bit of a hack, need to improve somehow
                 String contents = File.ReadAllText(replayPath);
-                contents.Replace("SPWINNERSP", msg.getRawText().Contains("winner\":\"white\"") ? "white" : "black");
+                contents = contents.Replace("SPWINNERSP", msg.getRawText().Contains("winner\":\"white\"") ? "white" : "black");
                 File.WriteAllText(replayPath, contents);
 
+                // Start uploading immediately since we don't need to wait for anyone
                 if( mod.config.GetString("replay").Equals("auto") ) {
                     new Thread(new ThreadStart(Upload)).Start();
                 }
