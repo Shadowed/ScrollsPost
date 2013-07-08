@@ -9,7 +9,7 @@ using System.Reflection;
 using UnityEngine;
 
 namespace ScrollsPost {
-    public class Mod : BaseMod, IOkCallback, IOkStringCancelCallback {
+    public class Mod : BaseMod, IOkCallback, IOkStringCancelCallback, ICommListener {
         private String logFolder;
         private TradePrices activeTrade;
 
@@ -180,8 +180,7 @@ namespace ScrollsPost {
                     }
                 
                 } else if( info.targetMethod.Equals("toggleMenu") ) {
-                    replayRunner.Stop();
-                    replayRunner = null;
+                    StopReplayRunner();
                     returnValue = null;
                     return true;
 
@@ -212,6 +211,12 @@ namespace ScrollsPost {
             }
 
             return;
+        }
+
+        public void handleMessage(Message msg) {
+            if( msg is ProfileInfoMessage && replayRunner != null ) {
+                StopReplayRunner();
+            }
         }
 
         public void onReconnect() {
@@ -251,7 +256,16 @@ namespace ScrollsPost {
         }
 
         public void StartReplayRunner(String path) {
+            App.Communicator.addListener(this);
             replayRunner = new ReplayRunner(this, path);
+        }
+
+        public void StopReplayRunner() {
+            if( replayRunner != null ) {
+                App.Communicator.removeListener(this);
+                replayRunner.Stop();
+                replayRunner = null;
+            }
         }
 
         public String OpenFileDialog() {
