@@ -136,10 +136,11 @@ namespace ScrollsPost {
         private void BuildReplayListMenu() {
             List<OptionPopups.ConfigOption> options = new List<OptionPopups.ConfigOption>();
 
-            foreach( String path in Directory.GetFiles(this.mod.replayLogger.replayFolder) ) {
-                if( !path.EndsWith(".spr") )
-                    continue;
+            String[] files = Directory.GetFiles(this.mod.replayLogger.replayFolder, "*.spr");
+            Array.Sort(files);
+            Array.Reverse(files);
 
+            foreach( String path in files ) {
                 using( StreamReader sr = new StreamReader(path) ) {
                     String line = sr.ReadLine();
                     if( line.StartsWith("metadata") ) {
@@ -149,6 +150,8 @@ namespace ScrollsPost {
                         DateTime played = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                         played = played.AddSeconds(Convert.ToDouble(metadata["played-at"]));
                         played = TimeZone.CurrentTimeZone.ToLocalTime(played);
+
+                        metadata[metadata["perspective"] + "-name"] = "[VP] " + metadata[metadata["perspective"] + "-name"];
 
                         String label = String.Format("{0} {1} - {2}\n{3} vs {4}", played.ToShortDateString(), played.ToShortTimeString(), metadata["deck"], metadata["white-name"], metadata["black-name"]);
                         options.Add(new OptionPopups.ConfigOption(label, path, path.Equals(replayPath)));
