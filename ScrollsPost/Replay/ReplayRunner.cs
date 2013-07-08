@@ -9,7 +9,7 @@ using ScrollsModLoader.Interfaces;
 using UnityEngine;
 
 namespace ScrollsPost {
-    public class ReplayRunner : IBattleModeUICallback, IOkStringCancelCallback, IOkCancelCallback {
+    public class ReplayRunner : IOkStringCancelCallback, IOkCancelCallback {
         //private ScrollsPost.Mod mod;
         private String replayPrimaryPath;
         private String replaySecondaryPath;
@@ -158,10 +158,6 @@ namespace ScrollsPost {
 
 
             GUI.depth = depth;
-        }
-
-        public void OnBattleUIInit(InvocationInfo info) {
-            typeof(BattleModeUI).GetField("callback", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(info.target, this);
         }
 
         public Boolean OnBattleUIShowEndTurn(InvocationInfo info) {
@@ -365,17 +361,6 @@ namespace ScrollsPost {
                 }
             }
         }
-
-
-        // Part of IBattleModeUICallback
-        public Boolean allowEndTurn() {
-            return false;
-        }
-
-        public void endturnPressed() {
-
-        }
-
     }
 }
 
