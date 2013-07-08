@@ -58,7 +58,6 @@ namespace ScrollsPost {
 
             // Add replay support
             if( config.VersionBelow(6) ) {
-                // Move to per account configuration
                 config.Add("replay", "ask");
                 new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)5);
             }
@@ -76,6 +75,8 @@ namespace ScrollsPost {
             return "ScrollsPost";
         }
 
+        // WARNING: Please contact me first if you change this.
+        // Changing the version from something besides what I set can cause problems as upgrades rely on it.
         public static int GetVersion() {
             return 6;
         }
