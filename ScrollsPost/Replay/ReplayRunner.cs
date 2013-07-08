@@ -44,6 +44,12 @@ namespace ScrollsPost {
             String secondary = path.Contains("-white.spr") ? path.Replace("-white.spr", "-black.spr") : path.Replace("-black.spr", "-white.spr");
             if( File.Exists(secondary) ) {
                 this.replaySecondaryPath = secondary;
+            } else if( !secondary.Contains(mod.replayLogger.replayFolder) ) {
+                // In case we're playing a replay from the download folder but we have the primary in our replay folder
+                secondary = mod.replayLogger.replayFolder + Path.DirectorySeparatorChar + Path.GetFileName(secondary);
+                if( File.Exists(secondary) ) {
+                    this.replaySecondaryPath = secondary;
+                }
             }
 
             GUISkin skin = (GUISkin)Resources.Load("_GUISkins/LobbyMenu");
