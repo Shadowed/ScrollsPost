@@ -25,6 +25,9 @@ namespace ScrollsPost {
         public void handleMessage(Message msg) {
             if( msg is LibraryViewMessage && config.ContainsKey("user-id") ) {
                 LibraryViewMessage viewMsg = (LibraryViewMessage) msg;
+                if( !viewMsg.profileId.Equals(App.MyProfile.ProfileInfo.id) ) {
+                    return;
+                }
 
                 inventoryCards.Clear();
                 foreach( Card card in viewMsg.cards ) {
