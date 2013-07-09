@@ -34,6 +34,8 @@ namespace ScrollsPost {
         private FieldInfo reverseField;
         private FieldInfo percentField;
         private FieldInfo effectField;
+        //private FieldInfo speedField;
+        private FieldInfo animFrameField;
 
         public ReplayRunner(ScrollsPost.Mod mod, String path) {
             //this.mod = mod;
@@ -88,12 +90,12 @@ namespace ScrollsPost {
             // Container
             Color color = GUI.color;
             GUI.color = new Color(0f, 0f, 0f, 1f);
-            Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.16f);
+            Rect container = new Rect(190f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.16f);
             //Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.06f);
             GUI.DrawTexture(container, ResourceManager.LoadTexture("Shared/blackFiller"));
             GUI.color = color;
 
-            GUI.depth = depth - 2;
+            GUI.depth = depth - 4;
 
             // Draw the header
             Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.16f);
@@ -108,7 +110,7 @@ namespace ScrollsPost {
             GUI.skin.label.normal.textColor = color;
 
             // Start/Pause
-            pos = new Rect(container.x * 1.06f, pos.y + pos.height + 10f, container.width * 0.90f, container.height * 0.20f);
+            pos = new Rect(container.x * 1.04f, pos.y + pos.height + 10f, container.width * 0.90f, container.height * 0.20f);
             //pos = new Rect(container.x * 1.06f, pos.y + pos.height - 6f, container.width * 0.90f, container.height * 0.0f);
             if( GUI.Button(pos, paused ? "Play" : "Pause", this.buttonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
@@ -180,19 +182,29 @@ namespace ScrollsPost {
             }
         }
 
+        
+        public void OnAnimationUpdate(InvocationInfo info) {
+            if( seekRound > 0 || speed > 1.5f ) {
+                float frame = (info.target as AnimPlayer).getFrameAnimation().getNumFrames() * 0.90f;
+                if( ((float)animFrameField.GetValue(info.target)) < frame ) {
+                    animFrameField.SetValue(info.target, frame);
+                }
+            }
+        }
+
         public void OnTweenUpdatePercentage(InvocationInfo info) {
             if( seekRound > 0 || speed > 1.5f ) {
                 if( (Boolean) reverseField.GetValue(info.target) ) {
-                    percentField.SetValue(info.target, 0f);
+                    percentField.SetValue(info.target, ((float)percentField.GetValue(info.target) * 0.25f));
                 } else {
-                    percentField.SetValue(info.target, 1f);
+                    percentField.SetValue(info.target, ((float)percentField.GetValue(info.target) * 1.75f));
                 }
             }
         }
 
         private void Delay(int ms) {
             if( seekRound > 0 ) {
-                ms = Math.Min(ms, 50);
+                ms = Math.Min(ms, 100);
             } else {
                 ms = (int)Math.Round(ms * speed);
             }
@@ -214,6 +226,7 @@ namespace ScrollsPost {
                 seekRound = Convert.ToInt16(choice);
                 if( seekRound <= currentRound ) {
                     rewind = true;
+                    internalPause = false;
                 }
             }
         }
@@ -234,6 +247,8 @@ namespace ScrollsPost {
             percentField = typeof(iTween).GetField("percentage", BindingFlags.NonPublic | BindingFlags.Instance);
             deselectMethod = typeof(BattleMode).GetMethod("deselectAllTiles", BindingFlags.Instance | BindingFlags.NonPublic);
             effectField = typeof(BattleMode).GetField("currentEffect", BindingFlags.NonPublic | BindingFlags.Instance);
+            //speedField = typeof(AnimPlayer).GetField("_speed", BindingFlags.NonPublic | BindingFlags.Instance);
+            animFrameField = typeof(AnimPlayer).GetField("_fframe", BindingFlags.NonPublic | BindingFlags.Instance);
 
             using( StreamReader primary = new StreamReader(this.replayPrimaryPath) ) {
                 if( String.IsNullOrEmpty(this.replaySecondaryPath) ) {
@@ -356,8 +371,11 @@ namespace ScrollsPost {
 
             if( line.Contains("TurnBegin") ) {
                 internalPause = true;
-                while( internalPause && !finished ) {
+
+                int timeout = 300;
+                while( internalPause && !finished && timeout > 0 ) {
                     Thread.Sleep(10);
+                    timeout -= 1;
                 }
             }
         }
