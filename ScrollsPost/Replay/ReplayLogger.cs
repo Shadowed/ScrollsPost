@@ -5,7 +5,6 @@ using System.Threading;
 using System.Net;
 using System.Text;
 using JsonFx.Json;
-using System.IO.Compression;
 
 namespace ScrollsPost {
     public class ReplayLogger : IOkCancelCallback, ICommListener {
@@ -33,10 +32,14 @@ namespace ScrollsPost {
             if( msg is BattleRedirectMessage ) {
                 enabled = true;
                 return;
+            
+            // Grab version for metadata
             } else if( msg is ServerInfoMessage ) {
                 currentVersion = (msg as ServerInfoMessage).version;
 
-            } else if( enabled && msg is ProfileInfoMessage ) {
+            // If you disconnect mid game, it'll have to trigger this on reconnect
+            // so only do this part if we flagged it as not being in a game, which means it really ended.
+            } else if( !inGame && enabled && msg is ProfileInfoMessage ) {
                 if( mod.config.GetString("replay").Equals("ask") ) {
                     App.Popups.ShowOkCancel(this, "replay", "Upload Replay?", "Do you want this replay to be uploaded to ScrollsPost.com?", "Yes", "No");
                 }
