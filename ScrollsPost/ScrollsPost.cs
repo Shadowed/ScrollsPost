@@ -25,6 +25,11 @@ namespace ScrollsPost {
         public String apiURL = "http://api.scrollspost.com/";
         //public String apiURL = "http://localhost:5000/api/";
 
+        // WARINING: This is used for internal configs, please do not change it or it will cause bugs.
+        // Change GetVersion() instead to not use the constant if it's needed.
+        private static int CURRENT_VERSION = 7;
+
+
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
             if( !Directory.Exists(logFolder + Path.DirectorySeparatorChar) ) {
@@ -56,15 +61,21 @@ namespace ScrollsPost {
                 config.Add("sync-notif", false);
             }
 
-            // Add replay support
-            if( config.VersionBelow(6) ) {
+            if( !config.ContainsKey("replay") ) {
                 config.Add("replay", "ask");
+            }
+
+            // Replay updates
+            if( config.VersionBelow(7) ) {
+                new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)6);
+            // Add replay support
+            } else if( config.VersionBelow(6) ) {
                 new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)5);
             }
 
             // Just updated
-            if( config.NewInstall() || !config.ContainsKey("conf-version") || config.GetInt("conf-version") != Mod.GetVersion() ) {
-                config.Add("conf-version", Mod.GetVersion());
+            if( config.NewInstall() || !config.ContainsKey("conf-version") || config.GetInt("conf-version") != CURRENT_VERSION ) {
+                config.Add("conf-version", CURRENT_VERSION);
             }
 
             // Check if we need to resync cards
@@ -75,10 +86,8 @@ namespace ScrollsPost {
             return "ScrollsPost";
         }
 
-        // WARNING: Please contact me first if you change this.
-        // Changing the version from something besides what I set can cause problems as upgrades rely on it.
         public static int GetVersion() {
-            return 6;
+            return CURRENT_VERSION;
         }
 
         public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version) {
@@ -90,6 +99,7 @@ namespace ScrollsPost {
                     scrollsTypes["TradeSystem"].Methods.GetMethod("UpdateView")[0],
                     scrollsTypes["CardView"].Methods.GetMethod("updateGraphics")[0],
 
+                    scrollsTypes["AnimPlayer"].Methods.GetMethod("UpdateOnly")[0],
                     scrollsTypes["Communicator"].Methods.GetMethod("handleNextMessage")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("addDelay")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("effectDone")[0],
@@ -168,6 +178,9 @@ namespace ScrollsPost {
                         returnValue = true;
                         return true;
                     }
+
+                } else if( info.targetMethod.Equals("UpdateOnly") ) {
+                    replayRunner.OnAnimationUpdate(info);
 
                 } else if( info.targetMethod.Equals("OnGUI") ) {
                     replayRunner.OnBattleGUI(info);
