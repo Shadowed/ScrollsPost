@@ -163,6 +163,8 @@ namespace ScrollsPost {
 
                         if( response.ContainsKey("url") ) {
                             mod.SendMessage(String.Format("Finished uploading replay to ScrollsPost. Can be found at {0}", response["url"]));
+                        } else if( response["error"] == "game_too_short" ) {
+                            mod.SendMessage("Replay rejected as it was too short, must go beyond 1 round to be uploaded.");
                         } else {
                             mod.SendMessage(String.Format("Error while uploading replay ({0}), please contact us for more info at support@scrollspost.com", response["error"]));
                         }
