@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Net;
 using System.IO;
 using JsonFx.Json;
@@ -71,6 +72,8 @@ namespace ScrollsPost {
                 BuildReplayMenu();
             } else if( type == "show-replay-list" ) {
                 BuildReplayListMenu();
+            } else if( type == "play-replay" ) {
+                this.mod.StartReplayRunner(replayPath);
             }
         }
 
@@ -90,6 +93,8 @@ namespace ScrollsPost {
                 } else if( choice == "replay-list" ) {
                     BuildReplayListMenu();
                 }
+            } else if( type == "show-replay-list" ) {
+                BuildReplayListMenu();
             } else if( type == "trade" ) {
                 config.Add("trade", choice.Equals("True"));
             } else if( type == "sync-notif" ) {
@@ -100,6 +105,8 @@ namespace ScrollsPost {
                 config.Add("data-period", choice);
             } else if( type == "back" ) {
                 Show();
+            } else if( type == "replay-url" ) {
+                new Thread(new ParameterizedThreadStart(PlayReplayFromURL)).Start(choice);
             } else if( type == "pick-replay" ) {
                 if( choice == "play" ) {
                     if( !String.IsNullOrEmpty(replayPath) ) {
@@ -110,14 +117,14 @@ namespace ScrollsPost {
 
                 } else if( choice == "upload" ) {
                     if( !String.IsNullOrEmpty(replayPath) ) {
-                        UploadReplay(replayPath);
+                        new Thread(new ParameterizedThreadStart(UploadReplay)).Start(replayPath);
                     } else {
                         App.Popups.ShowOk(this, "show-replay-list", "No Replay Chosen", "You must click a replay from the list before you can upload it.", "Ok");
                     }
                 } else if( choice == "play-file" ) {
                     PlayReplayFromFile();
                 } else if( choice == "play-url" ) {
-                    PlayReplayFromURL();
+                    App.Popups.ShowTextInput(this, "", "Can be any ScrollsPost replay URL, both perspectives will be downloaded if available.", "replay-url", "ScrollsPost Replay URL", "Enter an URL:", "View");
                 } else {
                     replayPath = choice;
                 }
@@ -142,21 +149,65 @@ namespace ScrollsPost {
             Array.Sort(files);
             Array.Reverse(files);
 
+            // Figure out what games we have multi perspectives for
+            Dictionary<String, Boolean> gameIDs = new Dictionary<String, Boolean>();
+            foreach( String path in files ) {
+                String name = Path.GetFileNameWithoutExtension(path);
+                name = name.Split(new char[] { '-' }, 2)[0];
+                if( gameIDs.ContainsKey(name) ) {
+                    gameIDs[name] = true;
+                } else {
+                    gameIDs[name] = false;
+                }
+            }
+
+            // Figure out what has been uploaded already
+            Dictionary<String, Boolean> notUploaded = new Dictionary<String, Boolean>();
+            using( StreamReader sr = new StreamReader(mod.replayLogger.uploadCachePath) ) {
+                while( sr.Peek() > 0 ) {
+                    notUploaded[sr.ReadLine()] = true;
+                }
+            }
+
             foreach( String path in files ) {
                 using( StreamReader sr = new StreamReader(path) ) {
                     String line = sr.ReadLine();
                     if( line.StartsWith("metadata") ) {
                         line = line.Split(new char[] { '|' }, 2)[1];
+                        String filename = Path.GetFileName(path);
+
                         Dictionary<String, object> metadata = new JsonReader().Read<Dictionary<String, object>>(line);
+                        // If we have a multi viewpoint replay, only show the white one as that's the person who plays first
+                        Boolean status = gameIDs[(String)metadata["game-id"]];
+                        if( status == true && !metadata["perspective"].Equals("white") ) {
+                            continue;
+                        }
 
                         DateTime played = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                         played = played.AddSeconds(Convert.ToDouble(metadata["played-at"]));
                         played = TimeZone.CurrentTimeZone.ToLocalTime(played);
 
-                        metadata[metadata["perspective"] + "-name"] = "[VP] " + metadata[metadata["perspective"] + "-name"];
+                        metadata["white-name"] = "<color=#fde50d>" + metadata["white-name"] + "</color>";
+                        metadata["black-name"] = "<color=#fde50d>" + metadata["black-name"] + "</color>";
 
-                        String label = String.Format("{0} {1} - {2}\n{3} vs {4}", played.ToShortDateString(), played.ToShortTimeString(), metadata["deck"], metadata["white-name"], metadata["black-name"]);
-                        options.Add(new OptionPopups.ConfigOption(label, path, path.Equals(replayPath)));
+                        if( status == true ) {
+                            metadata["white-name"] = "[VP] <color=#fde50d>" + metadata["white-name"] + "</color>";
+                            metadata["black-name"] = "[VP] <color=#fde50d>" + metadata["black-name"] + "</color>";
+                        } else {
+                            metadata[metadata["perspective"] + "-name"] = "[VP] " + metadata[metadata["perspective"] + "-name"];
+                        }
+
+                        String deck;
+                        if( notUploaded.ContainsKey(filename) ) {
+                            deck = "<color=#D61320>Not Uploaded</color>";
+                        } else {
+                            deck = (String) metadata["deck"];
+                        }
+
+                        String label = String.Format("{0} {1} - {2}\n{3} vs {4}", played.ToShortDateString(), played.ToShortTimeString(), deck, metadata["white-name"], metadata["black-name"]);
+                        OptionPopups.ConfigOption option = new OptionPopups.ConfigOption(label, path, path.Equals(replayPath));
+
+                        options.Add(option);
                     }
                 }
             }
@@ -225,8 +276,30 @@ namespace ScrollsPost {
         }
 
         // Replay management
-        public void UploadReplay(String path) {
+        public void UploadReplay(object path) {
+            String replayPath = (String)path;
 
+            // Check if it was uploaded already
+            if( File.Exists(mod.replayLogger.uploadCachePath) ) {
+                String line = String.Format("{0}=1", Path.GetFileName(replayPath));
+                using( StreamReader sr = new StreamReader(mod.replayLogger.uploadCachePath) ) {
+                    if( sr.ReadLine().Equals(line) ) {
+                        App.Popups.ShowOk(this, "show-replay-list", "Replay Uploaded", "You've already uploaded this replay and don't need to reupload it.", "Ok");
+                        return;
+                    }
+                }
+            }
+
+            App.Popups.ShowInfo("ScrollsPost Replay", "We're uploading your replay, this will only take a minute.");
+            Dictionary<String, object> response = mod.replayLogger.Upload(replayPath);
+
+            if( response.ContainsKey("url") ) {
+                App.Popups.ShowTextInput(this, (String)response["url"], "", "show-replay-list", "Replay Uploaded!", "URL:", "Done");
+            } else if( response["error"].Equals("game_too_short") ) {
+                App.Popups.ShowOk(this, "show-replay-list", "Replay Failed", "We were unable to upload the replay as it was too short and didn't have enough rounds played.", "Ok");
+            } else {
+                App.Popups.ShowOk(this, "show-replay-list", "Replay Failed", String.Format("We were unable to upload the replay due to error {0}", response["error"]), "Ok");
+            }
         }
 
         public void PlayReplayFromFile() {
@@ -240,8 +313,53 @@ namespace ScrollsPost {
             }
         }
 
-        public void PlayReplayFromURL() {
+        public void PlayReplayFromURL(object arg) {
+            String text = (String)arg;
 
+            Match match = Regex.Match(text, "replay/([0-9]+)-(0|1)/|([0-9]+)-(0|1).spr|([0-9+])-(0|1)", RegexOptions.IgnoreCase);
+            if( !match.Success ) {
+                App.Popups.ShowTextInput(this, text, "<color=red>Invalid Replay URL</color>", "reply-url", "ScrollsPost Replay URL", "Enter an URL:", "View");
+                return;
+            }
+
+            App.Popups.ShowInfo("ScrollsPost Replay", "Searching for replay, this may take a minute...");
+
+            int gameID = Convert.ToInt32(match.Groups[1].Value);
+            //int perspective = Convert.ToInt32(match.Groups[2].Value);
+
+            var urls = new String[] {
+                String.Format("http://www.scrollspost.com/replay/download/{0}-1.spr", gameID),
+                String.Format("http://www.scrollspost.com/replay/download/{0}-0.spr", gameID)
+            };
+            int found = 0;
+
+            foreach( String url in urls ) {
+                String path = String.Format("{0}{1}{2}-{3}.spr", mod.replayLogger.replayFolder, Path.DirectorySeparatorChar, gameID, url.EndsWith("-0.spr") ? "white" : "black");
+
+                try {
+                    WebClient wc = new WebClient();
+                    wc.DownloadFile(new Uri(url), path);
+
+                    if( File.Exists(path) ) {
+                        found += 1;
+                        replayPath = path;
+                    }
+
+                } catch ( WebException we ) {
+                    Console.WriteLine("***** WEBEXCEPTION {0}", we.ToString());
+                    if( File.Exists(path) ) {
+                        File.Delete(path);
+                    }
+                }
+            }
+
+            if( found == 0 ) {
+                App.Popups.ShowOk(this, "show-replay-list", "No Replay Found", "Sorry, we couldn't find any replays using the given URL.", "Ok");
+            } else if( found == 1 ) {
+                App.Popups.ShowOkCancel(this, "play-replay", "Found Replay", "We downloaded the replay, but only one viewpoint is available  Click 'Play Replay' to view.", "Play Replay", "Cancel");
+            } else if( found == 2 ) {
+                App.Popups.ShowOkCancel(this, "play-replay", "Found Replay", "We downloaded the replay and both viewpoints were available! Click 'Play Replay' to view.", "Play Replay", "Cancel");
+            }
         }
 
         // Authentication flow

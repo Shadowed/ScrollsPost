@@ -103,7 +103,13 @@ namespace ScrollsPost {
             int fontSize = GUI.skin.button.fontSize;
             GUI.skin.button.fontSize = 10 + Screen.height / 72;
             float num = (float)Screen.height * 0.03f;
-            Rect rect = new Rect((float)Screen.width * 0.5f - (float)Screen.height * 0.40f, (float)Screen.height * 0.15f, (float)Screen.height * 0.8f, (float)Screen.height * 0.6f);
+            Rect rect;
+            if( this.currentPopupType == PopupType.REPLAY_SCROLL ) {
+                rect = new Rect((float)Screen.width * 0.50f - (float)Screen.height * 0.50f, (float)Screen.height * 0.10f, (float)Screen.height * 1.05f, (float)Screen.height * 0.70f);
+            } else {
+                rect = new Rect((float)Screen.width * 0.50f - (float)Screen.height * 0.40f, (float)Screen.height * 0.15f, (float)Screen.height * 0.8f, (float)Screen.height * 0.6f);
+            }
+
             Rect rect2 = new Rect(rect.x + num, rect.y + num, rect.width - 2f * num, rect.height - 2f * num);
             new ScrollsFrame(rect).AddNinePatch(ScrollsFrame.Border.LIGHT_CURVED, NinePatch.Patches.CENTER).Draw();
 
@@ -164,11 +170,12 @@ namespace ScrollsPost {
 
             this.optionScroll = GUI.BeginScrollView(position2, this.optionScroll, new Rect(0f, 0f, num4, (float)(num5 - 1) * num3 + num2));
 
+            float per_row = this.currentPopupType == PopupType.MULTI_SCROLL ? 2f : 3f;
             for( int i = 0; i < num5; i++ ) {
-                for( int j = 0; j < 2; j++ ) {
-                    if( 2 * i + j < this.configOptions.Count ) {
-                        ConfigOption option = this.configOptions[2 * i + j];
-                        Rect r = new Rect((float)j * num4 / 2f, (float)i * num3, num4 / 2f - num, num2);
+                for( int j = 0; j < per_row; j++ ) {
+                    if( per_row * i + j < this.configOptions.Count ) {
+                        ConfigOption option = this.configOptions[(int)per_row * i + j];
+                        Rect r = new Rect((float)j * num4 / per_row, (float)i * num3, num4 / per_row - num, num2);
                         GUI.skin.button.fontSize = 10 + Screen.height / 60;
                         if( this.GUIButton(r, option.text + (option.enabled ? " (*)" : string.Empty), option.enabled) && !option.enabled ) {
                             // Select the option so the user sees the change
@@ -197,29 +204,29 @@ namespace ScrollsPost {
                     this.cancelCallback.PopupCancel(this.popupType);
                 }
 
-                Rect r3 = new Rect(popupInner.xMax - (float)Screen.height * 0.740f, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.1f, (float)Screen.height * 0.05f);
+                Rect r3 = new Rect(popupInner.xMax - popupInner.width, popupInner.yMax - (float)Screen.height * 0.04f, (float)Screen.height * 0.06f, (float)Screen.height * 0.05f);
                 if( this.GUIButton(r3, "Play") ) {
                     this.HidePopup();
                     this.okStringCallback.PopupOk(this.popupType, "play");
                 }
 
-                r3 = new Rect(r3.x + r3.width + 6f, r3.y, r3.width * 2f, r3.height);
-                if( this.GUIButton(r3, "Play From File") ) {
+                r3 = new Rect(r3.x + r3.width + 14f, r3.y, r3.width * 1.8f, r3.height);
+                if( this.GUIButton(r3, "Play File") ) {
                     this.HidePopup();
                     this.okStringCallback.PopupOk(this.popupType, "play-file");
                 }
 
-                //r3 = new Rect(r3.x + r3.width + 6f, r3.y, r3.width, r3.height);
-                //if( this.GUIButton(r3, "Play From URL") ) {
-                //    this.HidePopup();
-                //    this.okStringCallback.PopupOk(this.popupType, "play-url");
-                //}
+                r3 = new Rect(r3.x + r3.width + 14f, r3.y, r3.width, r3.height);
+                if( this.GUIButton(r3, "Play URL") ) {
+                    this.HidePopup();
+                    this.okStringCallback.PopupOk(this.popupType, "play-url");
+                }
 
-                //r3 = new Rect(r3.x + r3.width + 12f, r3.y, r3.width * 0.50f, r3.height);
-                //if( this.GUIButton(r3, "Upload") ) {
-                //    this.HidePopup();
-                //    this.okStringCallback.PopupOk(this.popupType, "upload");
-                //}
+                r3 = new Rect(r3.x + r3.width + 40f, r3.y, (float)Screen.height * 0.08f, r3.height);
+                if( this.GUIButton(r3, "Upload") ) {
+                    this.HidePopup();
+                    this.okStringCallback.PopupOk(this.popupType, "upload");
+                }
 
             } else {
                 GUI.skin.label.fontSize = 8 + Screen.height / 72;
