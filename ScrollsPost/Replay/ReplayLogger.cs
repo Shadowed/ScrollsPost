@@ -10,6 +10,8 @@ namespace ScrollsPost {
     public class ReplayLogger : IOkCancelCallback, ICommListener {
         private ScrollsPost.Mod mod;
         public String replayFolder;
+        public String uploadCachePath;
+
         private String replayPath;
         private String currentVersion;
         private double lastMessage;
@@ -25,6 +27,8 @@ namespace ScrollsPost {
             if( !Directory.Exists(replayFolder + Path.DirectorySeparatorChar) ) {
                 Directory.CreateDirectory(replayFolder + Path.DirectorySeparatorChar);
             }
+
+            uploadCachePath = replayFolder + Path.DirectorySeparatorChar + "upload-cache";
         }
 
         public void handleMessage(Message msg) {
@@ -108,6 +112,8 @@ namespace ScrollsPost {
                 // Start uploading immediately since we don't need to wait for anyone
                 if( mod.config.GetString("replay").Equals("auto") ) {
                     new Thread(new ThreadStart(Upload)).Start();
+                } else {
+                    LogNotUploaded(replayPath);
                 }
             }
 
@@ -129,6 +135,36 @@ namespace ScrollsPost {
         }
 
         private void Upload() {
+            Upload(replayPath);
+        }
+
+        private void LogNotUploaded(String path) {
+            using( StreamWriter sw = File.AppendText(uploadCachePath) ) {
+                sw.WriteLine(Path.GetFileName(path));
+            }
+        }
+
+        private void LogUploaded(String path) {
+            if( !File.Exists(uploadCachePath) ) {
+                return;
+            }
+
+            String name = Path.GetFileName(path);
+
+            var lines = new List<String>();
+            using( StreamReader sw = new StreamReader(uploadCachePath) ) {
+                while( sw.Peek() > 0 ) {
+                String line = sw.ReadLine();
+                    if( !line.Equals(name) ) {
+                        lines.Add(line);
+                    }
+                }
+            }
+
+            File.WriteAllLines(uploadCachePath, lines.ToArray());
+        }
+
+        public Dictionary<String, object> Upload(String path) {
             // Setup
             String boundary = String.Format("---------------------------{0}", (int)mod.TimeSinceEpoch());
             byte[] boundaryBytes = Encoding.ASCII.GetBytes(String.Format("\r\n--{0}\r\n", boundary));
@@ -142,13 +178,13 @@ namespace ScrollsPost {
                 stream.Write(boundaryBytes, 0, boundaryBytes.Length);
 
                 // File info
-                String field = String.Format("Content-Disposition: form-data; name=\"{0}\"; filename=\"{1}\"\r\nContent-Type: {2}\r\n\r\n", "replay", Path.GetFileName(replayPath), "text/plain");
+                String field = String.Format("Content-Disposition: form-data; name=\"{0}\"; filename=\"{1}\"\r\nContent-Type: {2}\r\n\r\n", "replay", Path.GetFileName(path), "text/plain");
                 byte[] bytes = Encoding.UTF8.GetBytes(field);
 
                 stream.Write(bytes, 0, bytes.Length);
 
                 // Write the file
-                bytes = File.ReadAllBytes(replayPath);
+                bytes = File.ReadAllBytes(path);
                 stream.Write(bytes, 0, bytes.Length);
 
                 bytes = Encoding.ASCII.GetBytes(String.Format("\r\n--{0}--\r\n", boundary));
@@ -163,18 +199,29 @@ namespace ScrollsPost {
 
                         if( response.ContainsKey("url") ) {
                             mod.SendMessage(String.Format("Finished uploading replay to ScrollsPost. Can be found at {0}", response["url"]));
+                            LogUploaded(path);
                         } else if( response["error"].Equals("game_too_short") ) {
                             mod.SendMessage("Replay rejected as it was too short, must go beyond 1 round to be uploaded.");
                         } else {
                             mod.SendMessage(String.Format("Error while uploading replay ({0}), please contact us for more info at support@scrollspost.com", response["error"]));
+                            LogNotUploaded(path);
                         }
+
+                        return response;
                     }
                 }
 
             } catch ( WebException we ) {
+                LogNotUploaded(path);
+
                 Console.WriteLine("**** ERROR {0}", we.ToString());
-                mod.SendMessage(String.Format("We had an HTTP error while uploading replay {0}, contact us at support@scrollspost.com for help.", Path.GetFileName(replayPath)));
+                mod.SendMessage(String.Format("We had an HTTP error while uploading replay {0}, contact us at support@scrollspost.com for help.", Path.GetFileName(path)));
                 mod.WriteLog("Failed to sync collection", we);
+
+                Dictionary<String, object> response = new Dictionary<String, object>();
+                response["error"] = we.ToString();
+
+                return response;
             }
         }
     }
