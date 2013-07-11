@@ -24,7 +24,7 @@ namespace ScrollsPost {
         public String apiURL = "http://api.scrollspost.com/";
         //public String apiURL = "http://localhost:5000/api/";
 
-        // WARINING: This is used for internal configs, please do not change it or it will cause bugs.
+        // WARNING: This is used for internal configs, please do not change it or it will cause bugs.
         // Change GetVersion() instead to not use the constant if it's needed.
         private static int CURRENT_VERSION = 7;
 
