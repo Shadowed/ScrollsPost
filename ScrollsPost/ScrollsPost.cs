@@ -86,7 +86,7 @@ namespace ScrollsPost {
         }
 
         public static int GetVersion() {
-            return CURRENT_VERSION;
+            return CURRENT_VERSION - 1;
         }
 
         public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version) {
