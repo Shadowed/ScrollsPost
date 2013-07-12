@@ -102,7 +102,7 @@ namespace ScrollsPost {
                     scrollsTypes["Communicator"].Methods.GetMethod("handleNextMessage")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("addDelay")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("effectDone")[0],
-                    scrollsTypes["iTween"].Methods.GetMethod("UpdatePercentage")[0],
+                    scrollsTypes["iTween"].Methods.GetMethod("Launch")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("OnGUI")[0],
                     scrollsTypes["BattleModeUI"].Methods.GetMethod("ShowEndTurn")[0],
                     scrollsTypes["GUIBattleModeMenu"].Methods.GetMethod("toggleMenu")[0],
@@ -190,6 +190,9 @@ namespace ScrollsPost {
                         return true;
                     }
                 
+                } else if( info.targetMethod.Equals("Launch") ) {
+                    replayRunner.OnTweenLaunch(info);
+
                 } else if( info.targetMethod.Equals("toggleMenu") ) {
                     StopReplayRunner();
                     returnValue = null;
@@ -214,8 +217,6 @@ namespace ScrollsPost {
                 activeTrade.PostOverlayRender((Card)info.arguments[0]);
             } else if( activeTrade != null && info.targetMethod.Equals("UpdateView") ) {
                 activeTrade.PostUpdateView();
-            } else if( replayRunner != null && info.targetMethod.Equals("UpdatePercentage") ) {
-                replayRunner.OnTweenUpdatePercentage(info);
             }
 
             return;

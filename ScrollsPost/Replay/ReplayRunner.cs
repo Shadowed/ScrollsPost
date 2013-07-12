@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.IO;
@@ -34,8 +35,6 @@ namespace ScrollsPost {
         private GUIStyle realTimeButtonStyle;
 
         private MethodInfo deselectMethod;
-        private FieldInfo reverseField;
-        private FieldInfo percentField;
         private FieldInfo effectField;
         //private FieldInfo speedField;
         private FieldInfo animFrameField;
@@ -133,7 +132,7 @@ namespace ScrollsPost {
             if( rewind ) {
                 label = "Going...";
             } else if( seekRound > 0 ) {
-                label = String.Format("{0} of {1}", currentRound, seekRound);
+                label = String.Format("{0}%", Math.Round(((float)currentRound / seekRound) * 100f));
             }
 
             if( GUI.Button(goToPos, label, this.buttonStyle) ) {
@@ -200,26 +199,23 @@ namespace ScrollsPost {
         
         public void OnAnimationUpdate(InvocationInfo info) {
             if( seekRound > 0 || speed > 1.5f ) {
-                float frame = (info.target as AnimPlayer).getFrameAnimation().getNumFrames() * 0.90f;
+                float frame = (info.target as AnimPlayer).getFrameAnimation().getNumFrames() * 2f;
                 if( ((float)animFrameField.GetValue(info.target)) < frame ) {
                     animFrameField.SetValue(info.target, frame);
                 }
             }
         }
 
-        public void OnTweenUpdatePercentage(InvocationInfo info) {
-            if( seekRound > 0 || speed > 1.5f ) {
-                if( (Boolean) reverseField.GetValue(info.target) ) {
-                    percentField.SetValue(info.target, ((float)percentField.GetValue(info.target) * 0.25f));
-                } else {
-                    percentField.SetValue(info.target, ((float)percentField.GetValue(info.target) * 1.75f));
-                }
+        public void OnTweenLaunch(InvocationInfo info) {
+            Hashtable args = (Hashtable)info.arguments[1];
+            if( args.ContainsKey("time") ) {
+                args["time"] = 0.0f;
             }
         }
 
         private void Delay(int ms) {
             if( seekRound > 0 ) {
-                ms = Math.Min(ms, 100);
+                ms = Math.Min(ms, 50);
             } else {
                 ms = (int)Math.Round(ms * speed);
             }
@@ -256,11 +252,8 @@ namespace ScrollsPost {
 
         // Initial replay start
         private void Start() {
-            reverseField = typeof(iTween).GetField("reverse", BindingFlags.NonPublic | BindingFlags.Instance);
-            percentField = typeof(iTween).GetField("percentage", BindingFlags.NonPublic | BindingFlags.Instance);
             deselectMethod = typeof(BattleMode).GetMethod("deselectAllTiles", BindingFlags.Instance | BindingFlags.NonPublic);
             effectField = typeof(BattleMode).GetField("currentEffect", BindingFlags.NonPublic | BindingFlags.Instance);
-            //speedField = typeof(AnimPlayer).GetField("_speed", BindingFlags.NonPublic | BindingFlags.Instance);
             animFrameField = typeof(AnimPlayer).GetField("_fframe", BindingFlags.NonPublic | BindingFlags.Instance);
 
             using( StreamReader primary = new StreamReader(this.replayPrimaryPath) ) {
