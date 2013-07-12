@@ -207,9 +207,11 @@ namespace ScrollsPost {
         }
 
         public void OnTweenLaunch(InvocationInfo info) {
-            Hashtable args = (Hashtable)info.arguments[1];
-            if( args.ContainsKey("time") ) {
-                args["time"] = 0.0f;
+            if( seekRound > 0 || speed > 1.5f ) {
+                Hashtable args = (Hashtable)info.arguments[1];
+                if( args.ContainsKey("time") ) {
+                    args["time"] = 0.0f;
+                }
             }
         }
 
