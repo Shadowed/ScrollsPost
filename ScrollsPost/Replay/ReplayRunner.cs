@@ -26,7 +26,6 @@ namespace ScrollsPost {
         private Boolean wasPaused = false;
         private Boolean internalPause = false;
         private Boolean rewind = false;
-        private int currentRound = 0;
         private int seekRound = 0;
         private float speed = 1;
 
@@ -54,6 +53,13 @@ namespace ScrollsPost {
                 if( File.Exists(secondary) ) {
                     this.replaySecondaryPath = secondary;
                 }
+            }
+
+            // Always make sure the white is the primary as that person starts off the game
+            if( this.replaySecondaryPath.Contains("-white.spr") ) {
+                path = this.replayPrimaryPath;
+                this.replayPrimaryPath = this.replaySecondaryPath;
+                this.replaySecondaryPath = path;
             }
 
             GUISkin skin = (GUISkin)Resources.Load("_GUISkins/LobbyMenu");
@@ -129,10 +135,8 @@ namespace ScrollsPost {
             Rect goToPos = new Rect(pos.x + pos.width + 6f, pos.y, pos.width, pos.height);
 
             String label = "Go To";
-            if( rewind ) {
+            if( seekRound > 0 ) {
                 label = "Going...";
-            } else if( seekRound > 0 ) {
-                label = String.Format("{0}%", Math.Round(((float)currentRound / seekRound) * 100f));
             }
 
             if( GUI.Button(goToPos, label, this.buttonStyle) ) {
