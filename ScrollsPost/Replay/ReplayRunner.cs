@@ -18,7 +18,9 @@ namespace ScrollsPost {
         private Thread playerThread;
         private Dictionary<String, object> metadata;
 
+        private Boolean sceneLoaded = false;
         private Boolean finished = false;
+        private Boolean realtime = false;
         private Boolean paused = false;
         private Boolean wasPaused = false;
         private Boolean internalPause = false;
@@ -29,6 +31,7 @@ namespace ScrollsPost {
 
         private GUIStyle buttonStyle;
         private GUIStyle speedButtonStyle;
+        private GUIStyle realTimeButtonStyle;
 
         private MethodInfo deselectMethod;
         private FieldInfo reverseField;
@@ -58,6 +61,7 @@ namespace ScrollsPost {
             this.buttonStyle = skin.button;
             this.buttonStyle.normal.background = this.buttonStyle.hover.background;
             this.buttonStyle.normal.textColor = new Color(1f, 1f, 1f, 1f);
+            this.buttonStyle.fontSize = (int)((10 + Screen.height / 72) * 0.65f);
 
             this.buttonStyle.hover.textColor = new Color(0.80f, 0.80f, 0.80f, 1f);
 
@@ -67,6 +71,10 @@ namespace ScrollsPost {
             this.speedButtonStyle = new GUIStyle(this.buttonStyle);
             this.speedButtonStyle.fontSize = (int)Math.Round(this.buttonStyle.fontSize * 0.80f);
 
+            this.realTimeButtonStyle = new GUIStyle(this.buttonStyle);
+            this.realTimeButtonStyle.fontSize = (int)Math.Round(this.buttonStyle.fontSize * 1.20f);
+
+            sceneLoaded = false;
             playerThread = new Thread(new ThreadStart(Start));
             playerThread.Start();
         }
@@ -90,15 +98,14 @@ namespace ScrollsPost {
             // Container
             Color color = GUI.color;
             GUI.color = new Color(0f, 0f, 0f, 1f);
-            Rect container = new Rect(190f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.16f);
-            //Rect container = new Rect((float)Screen.width * 0.08f, (float)Screen.height * 0.82f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.06f);
+            Rect container = new Rect(190f, (float)Screen.height * 0.84f, (float)(Screen.width * 0.08f), (float)Screen.height * 0.16f);
             GUI.DrawTexture(container, ResourceManager.LoadTexture("Shared/blackFiller"));
             GUI.color = color;
 
             GUI.depth = depth - 4;
 
             // Draw the header
-            Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.16f);
+            Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.14f);
             //Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.50f);
 
             int fontSize = GUI.skin.label.fontSize;
@@ -106,11 +113,11 @@ namespace ScrollsPost {
             GUI.skin.label.fontSize = (int)((10 + Screen.height / 72) * 0.65f);
             GUI.skin.label.normal.textColor = new Color(0.85f, 0.70f, 0.043f, 1f);
             GUI.Label(pos, "ScrollsPost Replay");
-            GUI.skin.label.fontSize = fontSize;
             GUI.skin.label.normal.textColor = color;
+            GUI.skin.label.fontSize = fontSize;
 
             // Start/Pause
-            pos = new Rect(container.x * 1.04f, pos.y + pos.height + 10f, container.width * 0.90f, container.height * 0.20f);
+            pos = new Rect(container.x * 1.04f, pos.y + pos.height + 10f, container.width * 0.43f, container.height * 0.20f);
             //pos = new Rect(container.x * 1.06f, pos.y + pos.height - 6f, container.width * 0.90f, container.height * 0.0f);
             if( GUI.Button(pos, paused ? "Play" : "Pause", this.buttonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
@@ -120,44 +127,52 @@ namespace ScrollsPost {
             }
 
             // Go to Round
-            pos = new Rect(pos.x, pos.y + pos.height + 8f, pos.width, pos.height);
+            Rect goToPos = new Rect(pos.x + pos.width + 6f, pos.y, pos.width, pos.height);
 
-            String label = "Go To Round";
+            String label = "Go To";
             if( rewind ) {
-                label = "Rewinding...";
+                label = "Going...";
             } else if( seekRound > 0 ) {
-                label = String.Format("Seeking {0} of {1}", currentRound, seekRound);
+                label = String.Format("{0} of {1}", currentRound, seekRound);
             }
 
-            if( GUI.Button(pos, label, this.buttonStyle) ) {
+            if( GUI.Button(goToPos, label, this.buttonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 App.Popups.ShowTextInput(this, "", "Can be a round that has always passed or one in the future.", "round", "Round Seek", "Enter a Round to Go To:", "Seek");
             }
 
             // Speed changes
-            pos = new Rect(pos.x, pos.y + pos.height + 8f, pos.width * 0.32f, pos.height);
+            Rect speedPos = new Rect(pos.x, pos.y + pos.height + 8f, (container.width * 0.90f) * 0.32f, pos.height);
 
-            float newSpeed = speed >= 0.50f ? Math.Min(0.75f, speed - 0.25f) : 0.25f;
-
-            if( GUI.Button(pos, String.Format("{0}%", newSpeed * 100), this.speedButtonStyle) ) {
+            // Slower
+            float newSpeed = speed <= 1.75f ? Math.Max(speed + 0.25f, 1.25f) : 2f;
+            if( speed < 2f && GUI.Button(speedPos, String.Format("Slower", newSpeed * 100), this.speedButtonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 speed = newSpeed;
             }
 
-            pos = new Rect(pos.x + pos.width + 2f, pos.y, pos.width, pos.height);
-            if( GUI.Button(pos, "100%", this.speedButtonStyle) ) {
+            // Normal
+            speedPos = new Rect(speedPos.x + speedPos.width + (container.width * 0.015f), speedPos.y, speedPos.width, speedPos.height);
+            if( GUI.Button(speedPos, "Normal", this.speedButtonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 speed = 1;
             }
 
-            newSpeed = speed <= 1.75f ? Math.Max(speed + 0.25f, 1.25f) : 2f;
+            // Faster
+            newSpeed = speed >= 0.50f ? Math.Min(0.75f, speed - 0.25f) : 0.25f;
 
-            pos = new Rect(pos.x + pos.width + 2f, pos.y, pos.width, pos.height);
-            if( GUI.Button(pos, String.Format("{0}%", newSpeed * 100), this.speedButtonStyle) ) {
+            speedPos = new Rect(speedPos.x + speedPos.width + (container.width * 0.015f), speedPos.y, speedPos.width, speedPos.height);
+            if( newSpeed > 0.25f && GUI.Button(speedPos, "Faster", this.speedButtonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 speed = newSpeed;
             }
 
+            // Speed cap
+            pos = new Rect(pos.x, speedPos.y + pos.height + 8f, container.width * 0.90f, pos.height);
+            if( GUI.Button(pos, realtime ? "Disable Real Time" : "Enable Real Time", this.realTimeButtonStyle) ) {
+                App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
+                realtime = !realtime;
+            }
 
             GUI.depth = depth;
         }
@@ -236,13 +251,11 @@ namespace ScrollsPost {
             finished = true;
             playerThread.Abort();
             App.Communicator.setData("");
-
             SceneLoader.loadScene("_Lobby");
         }
 
         // Initial replay start
         private void Start() {
-            SceneLoader.loadScene("_BattleModeView");
             reverseField = typeof(iTween).GetField("reverse", BindingFlags.NonPublic | BindingFlags.Instance);
             percentField = typeof(iTween).GetField("percentage", BindingFlags.NonPublic | BindingFlags.Instance);
             deselectMethod = typeof(BattleMode).GetMethod("deselectAllTiles", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -344,6 +357,7 @@ namespace ScrollsPost {
 
             if( rewind ) {
                 rewind = false;
+                sceneLoaded = false;
                 currentRound = 0;
 
                 Start();
@@ -361,7 +375,16 @@ namespace ScrollsPost {
 
             // Preserve the time taken between messages
             if( !wasPaused && delay && parts[0].Equals("elapsed") ) {
-                Delay((int)Math.Round(1000 * Convert.ToDouble(parts[1])));
+                if( realtime ) {
+                    Delay((int)Math.Round(1000 * Convert.ToDouble(parts[1])));
+                } else {
+                    Delay(1100);
+                }
+            }
+
+            if( !sceneLoaded ) {
+                sceneLoaded = true;
+                SceneLoader.loadScene("_BattleModeView");
             }
 
             App.Communicator.setData(parts[2].Replace(perspectiveID, App.MyProfile.ProfileInfo.id));
