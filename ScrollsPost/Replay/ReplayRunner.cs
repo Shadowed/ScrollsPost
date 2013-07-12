@@ -26,7 +26,7 @@ namespace ScrollsPost {
         private Boolean wasPaused = false;
         private Boolean internalPause = false;
         private Boolean rewind = false;
-        private int seekRound = 0;
+        private int seekTurn = 0;
         private float speed = 1;
 
         private GUIStyle buttonStyle;
@@ -41,10 +41,10 @@ namespace ScrollsPost {
         public ReplayRunner(ScrollsPost.Mod mod, String path) {
             //this.mod = mod;
             this.replayPrimaryPath = path;
-            this.primaryType = path.Contains("-white.spr") ? "white" : "black";
+            this.primaryType = path.EndsWith("-white.spr") ? "white" : "black";
 
             // Check if we have both perspectives available to us
-            String secondary = path.Contains("-white.spr") ? path.Replace("-white.spr", "-black.spr") : path.Replace("-black.spr", "-white.spr");
+            String secondary = path.EndsWith("-white.spr") ? path.Replace("-white.spr", "-black.spr") : path.Replace("-black.spr", "-white.spr");
             if( File.Exists(secondary) ) {
                 this.replaySecondaryPath = secondary;
             } else if( !secondary.Contains(mod.replayLogger.replayFolder) ) {
@@ -56,10 +56,11 @@ namespace ScrollsPost {
             }
 
             // Always make sure the white is the primary as that person starts off the game
-            if( this.replaySecondaryPath.Contains("-white.spr") ) {
+            if( !String.IsNullOrEmpty(this.replaySecondaryPath) && this.primaryType.Equals("black") ) {
                 path = this.replayPrimaryPath;
                 this.replayPrimaryPath = this.replaySecondaryPath;
                 this.replaySecondaryPath = path;
+                this.primaryType = "white";
             }
 
             GUISkin skin = (GUISkin)Resources.Load("_GUISkins/LobbyMenu");
@@ -135,13 +136,13 @@ namespace ScrollsPost {
             Rect goToPos = new Rect(pos.x + pos.width + 6f, pos.y, pos.width, pos.height);
 
             String label = "Go To";
-            if( seekRound > 0 ) {
+            if( seekTurn > 0 ) {
                 label = "Going...";
             }
 
             if( GUI.Button(goToPos, label, this.buttonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
-                App.Popups.ShowTextInput(this, "", "Can be a round that has always passed or one in the future.", "round", "Round Seek", "Enter a Round to Go To:", "Seek");
+                App.Popups.ShowTextInput(this, "", "Turn 1 = First Player Round 1 / Turn 2 = Second Player Round 2 / Turn 3 = First Player Round 2 and so on.", "turn", "Turn Seek", "Enter a Turn to Go To:", "Seek");
             }
 
             // Speed changes
@@ -185,24 +186,19 @@ namespace ScrollsPost {
         }
         
         public Boolean OnBattleDelay(InvocationInfo info) {
-            return seekRound > 0 || speed > 1.5f;
+            return seekTurn > 0 || speed < 0.50f;
         }
 
         public void OnBattleEffectDone(InvocationInfo info) {
             EffectMessage msg = (EffectMessage)effectField.GetValue(info.target);
             if( msg.type == "TurnBegin" ) {
-                currentRound = (int)Math.Round((msg as EMTurnBegin).turn / 2f);
-                if( currentRound == seekRound ) {
-                    seekRound = 0;
-                }
-
                 internalPause = false;
             }
         }
 
         
         public void OnAnimationUpdate(InvocationInfo info) {
-            if( seekRound > 0 || speed > 1.5f ) {
+            if( seekTurn > 0 || speed < 0.50f ) {
                 float frame = (info.target as AnimPlayer).getFrameAnimation().getNumFrames() * 2f;
                 if( ((float)animFrameField.GetValue(info.target)) < frame ) {
                     animFrameField.SetValue(info.target, frame);
@@ -211,7 +207,7 @@ namespace ScrollsPost {
         }
 
         public void OnTweenLaunch(InvocationInfo info) {
-            if( seekRound > 0 || speed > 1.5f ) {
+            if( seekTurn > 0 || speed < 0.50f ) {
                 Hashtable args = (Hashtable)info.arguments[1];
                 if( args.ContainsKey("time") ) {
                     args["time"] = 0.0f;
@@ -220,13 +216,28 @@ namespace ScrollsPost {
         }
 
         private void Delay(int ms) {
-            if( seekRound > 0 ) {
-                ms = Math.Min(ms, 50);
-            } else {
-                ms = (int)Math.Round(ms * speed);
-            }
+            ms = (int)Math.Round(ms * speed);
 
-            Thread.Sleep(ms);
+            // Run as normal
+            if( ms < 200 ) {
+                Thread.Sleep(ms);
+            // Allow interrupts
+            } else {
+                float savedSpeed = speed;
+                while( ms > 0 ) {
+                    if( ms > 50 ) {
+                        Thread.Sleep(50);
+                        ms -= 50;
+                    } else {
+                        Thread.Sleep(0);
+                        ms = 0;
+                    }
+
+                    if( rewind || speed != savedSpeed || seekTurn > 0 ) {
+                        break;
+                    }
+                }
+            }
         }
 
         // Round seeking
@@ -239,12 +250,197 @@ namespace ScrollsPost {
         }
 
         public void PopupOk(String type, String choice) {
-            if( type == "round" ) {
-                seekRound = Convert.ToInt16(choice);
-                if( seekRound <= currentRound ) {
-                    rewind = true;
-                    internalPause = false;
+            if( type == "turn" ) {
+                seekTurn = Convert.ToInt16(choice);
+                rewind = true;
+                internalPause = false;
+            }
+        }
+
+        // Handles the instant seek functionality
+        private void CoalesceEvents(StreamReader sr) {
+            var units = new Dictionary<object, Dictionary<object, object>>();
+            var stats = new Dictionary<object, Dictionary<object, object>>();
+            var idols = new Dictionary<object, Dictionary<object, object>>(); 
+            var lastEvents = new Dictionary<object, object>();
+            var lastHands = new Dictionary<object, object>();
+
+            foreach( var side in new string[] { "white", "black" } ) {
+                units[side] = new Dictionary<object, object>();
+                stats[side] = new Dictionary<object, object>();
+                idols[side] = new Dictionary<object, object>();
+            }
+
+            int lastTurn = 0;
+            String lastTurnSide = "white";
+
+            while( sr.Peek() > 0 && seekTurn > 0 ) {
+                String line = sr.ReadLine();
+                if( !line.Contains("NewEffects") )
+                    continue;
+
+                line = line.Split(new char[] { '|' }, 3)[2];
+                var msg = (Dictionary<String, object>)new JsonReader().Read<Dictionary<String, object>>(line);
+                if( !msg.ContainsKey("effects") )
+                    continue;
+
+                var effects = (Dictionary<String, object>[])msg["effects"];
+                foreach( var effect in effects ) {
+                    if( effect.ContainsKey("MoveUnit") ) {
+                        var unit = (Dictionary<String, object>)effect["MoveUnit"];
+                        var fromTile = (Dictionary<String, String>)unit["from"];
+                        var toTile = (Dictionary<String, String>)unit["to"];
+
+                        units[toTile["color"]][toTile["position"]] = units[fromTile["color"]][fromTile["position"]];
+                        stats[toTile["color"]][toTile["position"]] = stats[fromTile["color"]][fromTile["position"]];
+
+                        units[fromTile["color"]].Remove(fromTile["position"]);
+                        stats[fromTile["color"]].Remove(fromTile["position"]);
+
+                    } else if( effect.ContainsKey("SummonUnit") ) {
+                        var unit = (Dictionary<String, object>)(effect["SummonUnit"] as Dictionary<String, object>)["target"];
+                        units[unit["color"]][unit["position"]] = effect;
+                    
+                    } else if( effect.ContainsKey("RemoveUnit") ) {
+                        var unit = (Dictionary<String, object>)(effect["RemoveUnit"] as Dictionary<String, object>)["tile"];
+                        units[unit["color"]].Remove(unit["position"]);
+                        stats[unit["color"]].Remove(unit["position"]);
+
+                    } else if( effect.ContainsKey("StatsUpdate") ) {
+                        var target = (Dictionary<String, object>)(effect["StatsUpdate"] as Dictionary<String, object>)["target"];
+                        stats[target["color"]][target["position"]] = effect;
+                    
+                    } else if( effect.ContainsKey("IdolUpdate") ) {
+                        var idol = (Dictionary<String, object>)(effect["IdolUpdate"] as Dictionary<String, object>)["idol"];
+                        idols[idol["color"]][idol["position"]] = effect;
+
+                    // Various states we need
+                    } else if( effect.ContainsKey("ResourcesUpdate") ) {
+                        lastEvents["ResourcesUpdate"] = effect;
+                    } else if( effect.ContainsKey("HandUpdate") ) {
+                        lastHands[(effect["HandUpdate"] as Dictionary<String, object>)["profileId"]] = effect;
+                    // Check if we're done seeking
+                    } else if( effect.ContainsKey("TurnBegin") ) {
+                        var turn = (Dictionary<String, object>)effect["TurnBegin"];
+
+                        // Yup!
+                        lastTurn = (int)turn["turn"];
+                        lastTurnSide = (String)turn["color"];
+
+                        if( lastTurn == seekTurn ) {
+                            seekTurn = 0;
+                        }
+                    }
                 }
+            }
+
+            // Seeked outside of the total rounds
+            if( seekTurn > 0 ) {
+                App.Popups.ShowOk(this, "", "Too Far", String.Format("You tried to seek to round {0}, but the game ends at round {1}.", seekTurn, lastTurn), "Ok");
+                return;
+            }
+
+            // Now play us off keyboard cat
+            var resEffects = new List<Dictionary<String, object>>();
+            var resStates = new Dictionary<String, object>();
+
+            foreach( var side in new string[] { "white", "black" } ) {
+                var state = new Dictionary<String, object>();
+                var board = new Dictionary<String, object>();
+                var idolHP = new Dictionary<int, int>();
+                var tiles = new List<Dictionary<String, object>>();
+
+                // Figure out units on board
+                foreach( var pair in units[side] ) {
+                    var value = (Dictionary<String, object>)pair.Value;
+                    var summon = (Dictionary<String, object>)value["SummonUnit"];
+                    var unit = (Dictionary<String, object>)summon["unit"];
+
+                    var tile = new Dictionary<String, object>();
+                    tile["typeId"] = unit["cardTypeId"].ToString();
+                    tile["isToken"] = unit["isToken"];
+                    tile["position"] = pair.Key;
+
+                    var stat = (Dictionary<String, object>)(stats[side][pair.Key] as Dictionary<String, object>)["StatsUpdate"];
+                    tile["ap"] = stat["ap"];
+                    tile["ac"] = stat["ac"];
+                    tile["hp"] = stat["hp"];
+
+                    tiles.Add(tile);
+                }
+
+                // Figure out idol health
+                idolHP[0] = 10;
+                idolHP[1] = 10;
+                idolHP[2] = 10;
+                idolHP[3] = 10;
+                idolHP[4] = 10;
+
+                foreach( var pair in idols[side] ) {
+                    var idol = (Dictionary<String, object>)(pair.Value as Dictionary<String, object>)["IdolUpdate"];
+                    idolHP[(int)pair.Key] = (int)(idol["idol"] as Dictionary<String, object>)["hp"];
+                }
+
+                // Finish off the rest of the states
+                board["idols"] = new List<int>(idolHP.Values).ToArray();
+                board["tiles"] = tiles.ToArray();
+                board["color"] = side;
+
+                state["board"] = board;
+                state["playerName"] = metadata[side + "-name"];
+
+                var resources = (Dictionary<String, object>)lastEvents["ResourcesUpdate"];
+
+                resources = (Dictionary<String, object>)resources["ResourcesUpdate"];
+                state["assets"] = resources[side + "Assets"];
+
+                resStates[side] = state;
+            }
+
+            // Write out state
+            var res = new Dictionary<String, object>();
+            res["msg"] = "GameState";
+            res["turn"] = lastTurn;
+            res["activeColor"] = lastTurnSide;
+            res["whiteGameState"] = resStates["white"];
+            res["blackGameStates"] = resStates["black"];
+            res["Phase"] = "Init";
+
+            var stateText = new JsonWriter().Write(res);
+
+            // Write out effects
+            // Hands
+            foreach( var pair in lastHands ) {
+                resEffects.Add((Dictionary<String, object>)pair.Value);
+            }
+
+            res = new Dictionary<String, object>();
+            res["msg"] = "NewEffects";
+            res["effects"] = resEffects.ToArray();
+
+            var effectText = new JsonWriter().Write(res);
+            stateText = "{\"whiteGameState\":{\"playerName\":\"Shadowed\",\"board\":{\"color\":\"white\",\"tiles\":[{\"typeId\":\"60\",\"ap\":0,\"ac\":-1,\"hp\":4,\"isToken\":true,\"position\":\"1,0\"},{\"typeId\":\"60\",\"ap\":0,\"ac\":-1,\"hp\":4,\"isToken\":true,\"position\":\"3,0\"}],\"idols\":[10,10,10,10,10]},\"assets\":{\"availableResources\":{\"DECAY\":0,\"ORDER\":0,\"ENERGY\":0,\"GROWTH\":0},\"outputResources\":{\"DECAY\":0,\"ORDER\":0,\"ENERGY\":0,\"GROWTH\":0},\"handSize\":4}},\"blackGameState\":{\"playerName\":\"Nytor\",\"board\":{\"color\":\"black\",\"tiles\":[],\"idols\":[5,5,5,5,5]},\"assets\":{\"availableResources\":{\"DECAY\":0,\"ORDER\":0,\"ENERGY\":0,\"GROWTH\":0},\"outputResources\":{\"DECAY\":0,\"ORDER\":0,\"ENERGY\":0,\"GROWTH\":0},\"handSize\":5}},\"activeColor\":\"white\",\"phase\":\"Init\",\"turn\":0,\"msg\":\"GameState\"}";
+
+            Console.WriteLine("******* {0}", stateText);
+            Console.WriteLine("******* {0}", effectText);
+
+            // Send it off
+            SceneLoader.loadScene("_BattleModeView");
+
+            App.Communicator.setData(stateText);
+            msgPending = true;
+
+            while( msgPending ) {
+                Thread.Sleep(10);
+            }
+
+            Thread.Sleep(5000);
+
+            App.Communicator.setData(effectText);
+            msgPending = true;
+
+            while( msgPending ) {
+                Thread.Sleep(10);
             }
         }
 
@@ -258,6 +454,8 @@ namespace ScrollsPost {
 
         // Initial replay start
         private void Start() {
+            Thread.Sleep(500);
+
             deselectMethod = typeof(BattleMode).GetMethod("deselectAllTiles", BindingFlags.Instance | BindingFlags.NonPublic);
             effectField = typeof(BattleMode).GetField("currentEffect", BindingFlags.NonPublic | BindingFlags.Instance);
             animFrameField = typeof(AnimPlayer).GetField("_fframe", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -294,6 +492,9 @@ namespace ScrollsPost {
             while( primary.Peek() > 0 ) {
                 if( rewind || finished ) {
                     break;
+                // Start seeking and coalescing
+                } else if( seekTurn > 0 ) {
+                    CoalesceEvents(primary);
                 }
 
                 line = primary.ReadLine();
@@ -357,8 +558,6 @@ namespace ScrollsPost {
             if( rewind ) {
                 rewind = false;
                 sceneLoaded = false;
-                currentRound = 0;
-
                 Start();
             }
         }
