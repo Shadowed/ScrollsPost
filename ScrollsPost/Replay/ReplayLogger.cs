@@ -94,7 +94,7 @@ namespace ScrollsPost {
 
             double epoch = mod.TimeSinceEpoch();
             sw.WriteLine(String.Format("elapsed|{0}|{1}", Math.Round(epoch - lastMessage, 2), msg.getRawText().Replace("\n", "")));
-        
+
             // Game over
             if( msg is NewEffectsMessage && msg.getRawText().Contains("EndGame") ) {
                 inGame = false;

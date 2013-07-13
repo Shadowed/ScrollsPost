@@ -137,12 +137,12 @@ namespace ScrollsPost {
 
             String label = "Go To";
             if( seekTurn > 0 ) {
-                label = "Going...";
+                label = "Going";
             }
 
             if( GUI.Button(goToPos, label, this.buttonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
-                App.Popups.ShowTextInput(this, "", "Turn 1 = First Player Round 1 / Turn 2 = Second Player Round 2 / Turn 3 = First Player Round 2 and so on.", "turn", "Turn Seek", "Enter a Turn to Go To:", "Seek");
+                App.Popups.ShowTextInput(this, "", "Turn 1 = First Player Round 1 / Turn 2 = Second Player Round 2 / Turn 3 = First Player Round 2 and so on.", "turn", "Turn Seek", "Enter a Turn:", "Seek");
             }
 
             // Speed changes
@@ -186,19 +186,19 @@ namespace ScrollsPost {
         }
         
         public Boolean OnBattleDelay(InvocationInfo info) {
-            return seekTurn > 0 || speed < 0.50f;
+            return speed < 0.50f;
         }
 
         public void OnBattleEffectDone(InvocationInfo info) {
             EffectMessage msg = (EffectMessage)effectField.GetValue(info.target);
-            if( msg.type == "TurnBegin" ) {
+            if( msg.type.Equals("TurnBegin") ) {
                 internalPause = false;
             }
         }
 
         
         public void OnAnimationUpdate(InvocationInfo info) {
-            if( seekTurn > 0 || speed < 0.50f ) {
+            if( speed < 0.50f ) {
                 float frame = (info.target as AnimPlayer).getFrameAnimation().getNumFrames() * 2f;
                 if( ((float)animFrameField.GetValue(info.target)) < frame ) {
                     animFrameField.SetValue(info.target, frame);
@@ -207,7 +207,7 @@ namespace ScrollsPost {
         }
 
         public void OnTweenLaunch(InvocationInfo info) {
-            if( seekTurn > 0 || speed < 0.50f ) {
+            if( speed < 0.50f ) {
                 Hashtable args = (Hashtable)info.arguments[1];
                 if( args.ContainsKey("time") ) {
                     args["time"] = 0.0f;
@@ -233,7 +233,7 @@ namespace ScrollsPost {
                         ms = 0;
                     }
 
-                    if( rewind || speed != savedSpeed || seekTurn > 0 ) {
+                    if( rewind || speed != savedSpeed ) {
                         break;
                     }
                 }
@@ -273,9 +273,16 @@ namespace ScrollsPost {
 
             int lastTurn = 0;
             String lastTurnSide = "white";
+            String gameInfo = "";
+            String turnLine = "";
 
             while( sr.Peek() > 0 && seekTurn > 0 ) {
                 String line = sr.ReadLine();
+                if( gameInfo.Equals("") && line.Contains("GameInfo") ) {
+                    gameInfo = line.Split(new char[] { '|' }, 3)[2];
+                    continue;
+                }
+
                 if( !line.Contains("NewEffects") )
                     continue;
 
@@ -288,8 +295,8 @@ namespace ScrollsPost {
                 foreach( var effect in effects ) {
                     if( effect.ContainsKey("MoveUnit") ) {
                         var unit = (Dictionary<String, object>)effect["MoveUnit"];
-                        var fromTile = (Dictionary<String, String>)unit["from"];
-                        var toTile = (Dictionary<String, String>)unit["to"];
+                        var fromTile = (Dictionary<String, object>)unit["from"];
+                        var toTile = (Dictionary<String, object>)unit["to"];
 
                         units[toTile["color"]][toTile["position"]] = units[fromTile["color"]][fromTile["position"]];
                         stats[toTile["color"]][toTile["position"]] = stats[fromTile["color"]][fromTile["position"]];
@@ -326,6 +333,7 @@ namespace ScrollsPost {
                         // Yup!
                         lastTurn = (int)turn["turn"];
                         lastTurnSide = (String)turn["color"];
+                        turnLine = line;
 
                         if( lastTurn == seekTurn ) {
                             seekTurn = 0;
@@ -365,6 +373,9 @@ namespace ScrollsPost {
                     tile["ap"] = stat["ap"];
                     tile["ac"] = stat["ac"];
                     tile["hp"] = stat["hp"];
+                    if( stat.ContainsKey("buffs") ) {
+                        tile["buffs"] = stat["buffs"];
+                    }
 
                     tiles.Add(tile);
                 }
@@ -403,8 +414,8 @@ namespace ScrollsPost {
             res["turn"] = lastTurn;
             res["activeColor"] = lastTurnSide;
             res["whiteGameState"] = resStates["white"];
-            res["blackGameStates"] = resStates["black"];
-            res["Phase"] = "Init";
+            res["blackGameState"] = resStates["black"];
+            res["phase"] = "Init";
 
             var stateText = new JsonWriter().Write(res);
 
@@ -419,29 +430,29 @@ namespace ScrollsPost {
             res["effects"] = resEffects.ToArray();
 
             var effectText = new JsonWriter().Write(res);
-            stateText = "{\"whiteGameState\":{\"playerName\":\"Shadowed\",\"board\":{\"color\":\"white\",\"tiles\":[{\"typeId\":\"60\",\"ap\":0,\"ac\":-1,\"hp\":4,\"isToken\":true,\"position\":\"1,0\"},{\"typeId\":\"60\",\"ap\":0,\"ac\":-1,\"hp\":4,\"isToken\":true,\"position\":\"3,0\"}],\"idols\":[10,10,10,10,10]},\"assets\":{\"availableResources\":{\"DECAY\":0,\"ORDER\":0,\"ENERGY\":0,\"GROWTH\":0},\"outputResources\":{\"DECAY\":0,\"ORDER\":0,\"ENERGY\":0,\"GROWTH\":0},\"handSize\":4}},\"blackGameState\":{\"playerName\":\"Nytor\",\"board\":{\"color\":\"black\",\"tiles\":[],\"idols\":[5,5,5,5,5]},\"assets\":{\"availableResources\":{\"DECAY\":0,\"ORDER\":0,\"ENERGY\":0,\"GROWTH\":0},\"outputResources\":{\"DECAY\":0,\"ORDER\":0,\"ENERGY\":0,\"GROWTH\":0},\"handSize\":5}},\"activeColor\":\"white\",\"phase\":\"Init\",\"turn\":0,\"msg\":\"GameState\"}";
-
-            Console.WriteLine("******* {0}", stateText);
-            Console.WriteLine("******* {0}", effectText);
 
             // Send it off
+            sceneLoaded = true;
             SceneLoader.loadScene("_BattleModeView");
 
-            App.Communicator.setData(stateText);
-            msgPending = true;
+            internalPause = true;
+            foreach( var line in new string[] { gameInfo, stateText, effectText, turnLine } ) {
+                App.Communicator.setData(line);
+                msgPending = true;
 
-            while( msgPending ) {
+                while( msgPending ) {
+                    Thread.Sleep(10);
+                }
+
+                Thread.Sleep(1500);
+            }
+
+            internalPause = false;
+            while( internalPause ) {
                 Thread.Sleep(10);
             }
 
-            Thread.Sleep(5000);
-
-            App.Communicator.setData(effectText);
-            msgPending = true;
-
-            while( msgPending ) {
-                Thread.Sleep(10);
-            }
+            Thread.Sleep(2000);
         }
 
         // Stop a replay
@@ -454,8 +465,6 @@ namespace ScrollsPost {
 
         // Initial replay start
         private void Start() {
-            Thread.Sleep(500);
-
             deselectMethod = typeof(BattleMode).GetMethod("deselectAllTiles", BindingFlags.Instance | BindingFlags.NonPublic);
             effectField = typeof(BattleMode).GetField("currentEffect", BindingFlags.NonPublic | BindingFlags.Instance);
             animFrameField = typeof(AnimPlayer).GetField("_fframe", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -489,12 +498,13 @@ namespace ScrollsPost {
                 secondaryID = (String)metadata["white-id"];
             }
 
+            if( seekTurn > 0 ) {
+                CoalesceEvents(primary);
+            }
+
             while( primary.Peek() > 0 ) {
                 if( rewind || finished ) {
                     break;
-                // Start seeking and coalescing
-                } else if( seekTurn > 0 ) {
-                    CoalesceEvents(primary);
                 }
 
                 line = primary.ReadLine();
