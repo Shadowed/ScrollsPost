@@ -26,7 +26,7 @@ namespace ScrollsPost {
 
         // WARNING: This is used for internal configs, please do not change it or it will cause bugs.
         // Change GetVersion() instead to not use the constant if it's needed.
-        private static int CURRENT_VERSION = 7;
+        private static int CURRENT_VERSION = 8;
 
 
         public Mod() {
@@ -140,19 +140,19 @@ namespace ScrollsPost {
                         SendMessage("Configuration opened");
                         return true;
 
-                    } else if( msg.text.StartsWith("/pc-1h") ) {
+                    } else if( msg.text.StartsWith("/pc-1h ") ) {
                         new PriceCheck(this, "1-hour", msg.text.Split(new char[] { ' ' }, 2)[1]);
                         return true;
 
-                    } else if( msg.text.StartsWith("/pc-3d") ) {
+                    } else if( msg.text.StartsWith("/pc-3d ") ) {
                         new PriceCheck(this, "3-days", msg.text.Split(new char[] { ' ' }, 2)[1]);
                         return true;
 
-                    } else if( msg.text.StartsWith("/pc-7d") ) {
+                    } else if( msg.text.StartsWith("/pc-7d ") ) {
                         new PriceCheck(this, "7-days", msg.text.Split(new char[] { ' ' }, 2)[1]);
                         return true;
 
-                    } else if( msg.text.StartsWith("/pc") || msg.text.StartsWith("/pc-1d") ) {
+                    } else if( msg.text.StartsWith("/pc ") || msg.text.StartsWith("/pc-1d ") ) {
                         new PriceCheck(this, "1-day", msg.text.Split(new char[] { ' ' }, 2)[1]);
                         return true;
                     }
