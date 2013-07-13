@@ -164,9 +164,11 @@ namespace ScrollsPost {
 
             // Figure out what has been uploaded already
             Dictionary<String, Boolean> notUploaded = new Dictionary<String, Boolean>();
-            using( StreamReader sr = new StreamReader(mod.replayLogger.uploadCachePath) ) {
-                while( sr.Peek() > 0 ) {
-                    notUploaded[sr.ReadLine()] = true;
+            if( File.Exists(mod.replayLogger.uploadCachePath) ) {
+                using( StreamReader sr = new StreamReader(mod.replayLogger.uploadCachePath) ) {
+                    while( sr.Peek() > 0 ) {
+                        notUploaded[sr.ReadLine()] = true;
+                    }
                 }
             }
 
