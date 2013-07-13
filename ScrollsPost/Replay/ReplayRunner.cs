@@ -444,15 +444,13 @@ namespace ScrollsPost {
                     Thread.Sleep(10);
                 }
 
-                Thread.Sleep(1500);
+                Thread.Sleep(750);
             }
 
             internalPause = false;
             while( internalPause ) {
                 Thread.Sleep(10);
             }
-
-            Thread.Sleep(2000);
         }
 
         // Stop a replay
