@@ -44,7 +44,7 @@ namespace ScrollsPost {
         }
 
         public void ShowIntro() {
-            App.Popups.ShowOkCancel(this, "welcome", "Welcome to ScrollsPost!", "ScrollsPost mod has been installed, you can access the config by typing /sp or /scrollspost.\n\nTo use collection syncing and store management features, you need a ScrollsPost account.\nYou can create one quickly without leaving the game, it only takes a minute.", "Setup Account or Login", "Cancel");
+            App.Popups.ShowOkCancel(this, "welcome", "Welcome to ScrollsPost", "* You can access config through /sp or /scrollspost.\n* To use collection syncing, setup an account through /sp -> ScrollsPost Account.\n* You can manage the replay upload settings through /sp -> Replay Uploading\n* Questions, issues or comments, let us know at support@scrollspost.com", "Replay Configuration", "Done");
         }
 
         public void ShowChanges(object ver) {
@@ -66,9 +66,7 @@ namespace ScrollsPost {
         }
 
         public void PopupOk(String type) {
-            if( type == "welcome" ) {
-                ShowAuthEmail();
-            } else if( type == "show-replay" ) {
+            if( type == "welcome" || type == "show-replay" ) {
                 Init();
                 BuildReplayMenu();
             } else if( type == "show-replay-list" ) {
