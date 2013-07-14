@@ -47,13 +47,6 @@ namespace ScrollsPost {
             // Config migration + upgrades
             config.MigratePath();
 
-            // Old version migration + initial setup
-            if( config.NewInstall() ) {
-                new Thread(new ThreadStart(configGUI.ShowIntro)).Start();
-            } else if( !config.ContainsKey("conf-version") ) {
-                new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
-            }
-
             // Added trade/sync notification
             if( config.VersionBelow(5) ) {
                 config.Add("trade", true);
@@ -64,12 +57,19 @@ namespace ScrollsPost {
                 config.Add("replay", "ask");
             }
 
-            // Replay updates
-            if( config.VersionBelow(7) ) {
-                new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)6);
-            // Add replay support
-            } else if( config.VersionBelow(6) ) {
-                new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)5);
+            // Old version migration + initial setup
+            if( config.NewInstall() ) {
+                new Thread(new ThreadStart(configGUI.ShowIntro)).Start();
+            } else if( !config.ContainsKey("conf-version") ) {
+                new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
+            } else {
+                // Replay updates
+                if( config.VersionBelow(7) ) {
+                    new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)6);
+                    // Add replay support
+                } else if( config.VersionBelow(6) ) {
+                    new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)5);
+                }
             }
 
             // Just updated
