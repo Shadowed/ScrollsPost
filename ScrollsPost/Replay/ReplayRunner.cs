@@ -133,7 +133,6 @@ namespace ScrollsPost {
             }
 
             // Go to Round
-            /*
             Rect goToPos = new Rect(pos.x + pos.width + 6f, pos.y, pos.width, pos.height);
 
             String label = "Go To";
@@ -145,7 +144,6 @@ namespace ScrollsPost {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 App.Popups.ShowTextInput(this, "", "Turn 1 = First Player Round 1 / Turn 2 = Second Player Round 2 / Turn 3 = First Player Round 2 and so on.", "turn", "Turn Seek", "Enter a Turn:", "Seek");
             }
-            */
 
             // Speed changes
             Rect speedPos = new Rect(pos.x, pos.y + pos.height + 8f, (container.width * 0.90f) * 0.32f, pos.height);
@@ -364,11 +362,11 @@ namespace ScrollsPost {
                 foreach( var pair in units[side] ) {
                     var value = (Dictionary<String, object>)pair.Value;
                     var summon = (Dictionary<String, object>)value["SummonUnit"];
-                    var unit = (Dictionary<String, object>)summon["unit"];
+                    var card = (Dictionary<String, object>)summon["card"];
 
                     var tile = new Dictionary<String, object>();
-                    tile["typeId"] = unit["cardTypeId"].ToString();
-                    tile["isToken"] = unit["isToken"];
+                    tile["typeId"] = card["typeId"].ToString();
+                    tile["isToken"] = card["isToken"];
                     tile["position"] = pair.Key;
 
                     var stat = (Dictionary<String, object>)(stats[side][pair.Key] as Dictionary<String, object>)["StatsUpdate"];
@@ -463,30 +461,132 @@ namespace ScrollsPost {
             SceneLoader.loadScene("_Lobby");
         }
 
+        // Check the format and see if we need to do any upgrading
+        private String[] UpgradeFile(Dictionary<String, object> metadata, String path, StreamReader sr) {
+            String[] parts = (metadata["version"] as String).Split(new char[] { '.' }, 3);
+            float version = Convert.ToSingle(parts[0] + "." + parts[1]);
+
+            float format_version = version;
+            if( metadata.ContainsKey("format-version") ) {
+                parts = (metadata["format-version"] as String).Split(new char[] { '.' }, 3);
+                format_version = Convert.ToSingle(parts[0] + "." + parts[1]);
+            }
+
+            if( version >= 0.96f || format_version >= 0.96f )
+                return new string[] {};
+
+            // Upgrade from 0.95.x -> 0.96.0
+            App.Popups.ShowInfo("Replay Upgrade", String.Format("We're upgrading {0} to Scrolls 0.96.0 format.\n\nThis will only take a minute and won't have to be done again for this file.", Path.GetFileName(path)));
+
+            metadata["format-version"] = "0.96.0";
+            rewind = true;
+
+            // Start upgrading
+            List<String> lines = new List<String>();
+            lines.Add(String.Format("metadata|{0}", new JsonWriter().Write(metadata)));
+
+            while( sr.Peek() > 0 ) {
+                String line = sr.ReadLine();
+                // Only need to upgrade SummonUnit thankfully
+                if( !line.Contains("SummonUnit") ) {
+                    lines.Add(line);
+                    continue;
+                }
+
+                parts = line.Split(new char[] { '|' }, 3);
+                var msg = (Dictionary<String, object>)new JsonReader().Read<Dictionary<String, object>>(parts[2]);
+
+                var cardInfo = new Dictionary<String, object>();
+                var effects = (Dictionary<String, object>[])msg["effects"];
+                foreach( var effect in effects ) {
+                    if( effect.ContainsKey("CardPlayed") ) {
+                        var played = (Dictionary<String, object>)effect["CardPlayed"];
+                        var card = (Dictionary<String, object>)played["card"];
+                        cardInfo[String.Format("{0},{1}", played["color"], card["typeId"])] = card;
+
+                    } else if( effect.ContainsKey("SummonUnit") ) {
+                        var summon = (effect["SummonUnit"] as Dictionary<String, object>);
+                        var target = (Dictionary<String, object>)summon["target"];
+                        var typeID = (int)(summon["unit"] as Dictionary<String, object>)["cardTypeId"];
+
+                        String key = String.Format("{0},{1}", target["color"], typeID);
+                        if( cardInfo.ContainsKey(key) ) {
+                            summon["card"] = cardInfo[key];
+                        } else {
+                            var dummy = new Dictionary<String, object>();
+                            dummy["id"] = -1;
+                            dummy["typeId"] = typeID;
+                            dummy["isToken"] = (summon["unit"] as Dictionary<String, object>)["isToken"];
+                            dummy["tradable"] = true;
+                            dummy["level"] = 0;
+                            summon["card"] = dummy;
+                        }
+
+                        summon.Remove("unit");
+                    }
+                }
+
+                lines.Add(String.Format("{0}|{1}|{2}", parts[0], parts[1], new JsonWriter().Write(msg)));
+            }
+
+            // Yay done
+            App.Popups.KillCurrentPopup();
+
+            return lines.ToArray();
+        }
+
         // Initial replay start
+        private Dictionary<String, object> PullMetadata(StreamReader sr) {
+            String line = sr.ReadLine();
+            String[] parts = line.Split(new char[] { '|' }, 2);
+            return new JsonReader().Read<Dictionary<String, object>>(parts[1]);
+        }
+
         private void Start() {
             deselectMethod = typeof(BattleMode).GetMethod("deselectAllTiles", BindingFlags.Instance | BindingFlags.NonPublic);
             effectField = typeof(BattleMode).GetField("currentEffect", BindingFlags.NonPublic | BindingFlags.Instance);
             animFrameField = typeof(AnimPlayer).GetField("_fframe", BindingFlags.NonPublic | BindingFlags.Instance);
 
+            String[] primaryUpgrade;
+            String[] secondaryUpgrade = new string[] {};
+
             using( StreamReader primary = new StreamReader(this.replayPrimaryPath) ) {
+                var metadata = PullMetadata(primary);
+                primaryUpgrade = UpgradeFile(metadata, this.replayPrimaryPath, primary);
+
+                // Single perspective
                 if( String.IsNullOrEmpty(this.replaySecondaryPath) ) {
-                    ParseStreams(primary);
+                    if( primaryUpgrade.Length == 0 )
+                        ParseStreams(metadata, primary);
+               
+                // Multi perspective replay
                 } else {
                     using( StreamReader secondary = new StreamReader(this.replaySecondaryPath) ) {
-                        ParseStreams(primary, secondary);
+                        secondaryUpgrade = UpgradeFile(PullMetadata(secondary), this.replaySecondaryPath, secondary);
+                        if( primaryUpgrade.Length == 0 && secondaryUpgrade.Length == 0 ) {
+                            ParseStreams(metadata, primary, secondary);
+                        }
                     }
                 }
             }
+
+            Boolean upgraded = false;
+            if( primaryUpgrade.Length > 0 ) {
+                upgraded = true;
+                File.WriteAllLines(this.replayPrimaryPath, primaryUpgrade);
+            }
+
+            if( secondaryUpgrade.Length > 0 ) {
+                upgraded = true;
+                File.WriteAllLines(this.replaySecondaryPath, secondaryUpgrade);
+            }
+
+            if( upgraded )
+                Start();
         }
 
         // Handle pulling lines out of the replays for parsing
-        private void ParseStreams(StreamReader primary, StreamReader secondary=null) {
-            // Grab the config
-            String line = primary.ReadLine();
-            String[] parts = line.Split(new char[] { '|' }, 2);
-
-            metadata = new JsonReader().Read<Dictionary<String, object>>(parts[1]);
+        private void ParseStreams(Dictionary<String, object> metadata, StreamReader primary, StreamReader secondary=null) {
             // Sort out the IDs
             String primaryID;
             String secondaryID;
@@ -507,7 +607,7 @@ namespace ScrollsPost {
                     break;
                 }
 
-                line = primary.ReadLine();
+                String line = primary.ReadLine();
 
                 // Secondaries turn
                 if( secondary != null && line.Contains("TurnBegin") && !line.Contains(primaryType) ) {
