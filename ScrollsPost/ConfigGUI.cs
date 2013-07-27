@@ -58,6 +58,8 @@ namespace ScrollsPost {
                 App.Popups.ShowScrollText(this, "done", "ScrollsPost v1.0.6 - Fixes", "* This popup will no longer keep showing up each time you login\n\n* Instant seeking! Replay seeking is now instant no matter what round you want to go to\n\n* Improved the replay list with sorting by date + increased size\n\n* Improved viewpoint handling, if we have both viewpoints available, [VP] shows up next to both names the replay shows up once\n\n* Improved replay searching for multi-hand replays, now always checks your replay folder for the other viewpoint even when playing from a file\n\n* Improved replay controls, uses slower/normal/faster for speed instead of confusing percentages\n\n* Real time replays are now disabled by default, capped at 1.1 seconds per turn. You can enable them through replay controls\n\n* Added colored player names to make the replay list easier to read\n\n* Added replay uploading through the replay list, with a tag to show replays you haven't uploaded yet\n\n* Added replay playing by URL, automatically downloads both viewpoints when available to view multi-hand replays\n\n* Fixed replay controls covering the resource #s under certain screen resolutions\n\n* Fixed disconnects causing the replay logger to break\n\n* Fixed the initial load in of a replay looking buggy\n\n* Fixed collection syncing being messed up by trading (when it's enabled)", "Done");
             } else if( version == 8 ) {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.7 - Fixes", "This is a quick release to get ScrollsPost working with the new Summoner update.\n\nInstant skip to turn is not back yet, but it will be soon. You might have issues playing old replays, which will also be fixed soon.\nIf you run into any new issues, let me know at shadow@scrollspost.com", "Done");
+            } else if( version == 9 ) {
+                App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.9", "* Instant seeking and speed controls are back!\n* You can now play replays from older versions of Scrolls\n* You can now play ScrollsGuide replays (either by file or ScrollsGuide URL) including pre-0.96 replays", "Done");
             }
         }
 
@@ -125,7 +127,7 @@ namespace ScrollsPost {
                 } else if( choice == "play-file" ) {
                     PlayReplayFromFile();
                 } else if( choice == "play-url" ) {
-                    App.Popups.ShowTextInput(this, "", "Can be any ScrollsPost replay URL, both perspectives will be downloaded if available.", "replay-url", "ScrollsPost Replay URL", "Enter an URL:", "View");
+                    App.Popups.ShowTextInput(this, "", "Can be any ScrollsPost or ScrollsGuide URL. Both perspectives will be downloaded if available.", "replay-url", "Replay URL", "Enter an URL:", "View");
                 } else {
                     replayPath = choice;
                 }
@@ -296,17 +298,53 @@ namespace ScrollsPost {
 
         public void PlayReplayFromFile() {
             String path = this.mod.OpenFileDialog();
-            if( path.EndsWith(".sgr") ) {
-                App.Popups.ShowOk(this, "show-replay-list", "Not ScrollsPost Replay", "You cannot play an .sgr replay with this mod without converting it first, contact us at support@scrollspost.com and will help you out.", "Ok");
-            } else if( !path.EndsWith(".spr") ) {
-                App.Popups.ShowOk(this, "show-replay-list", "Not ScrollsPost Replay", "A valid ScrollsPost replay will end with .spr, this is not a valid replay.", "Ok");
+            if( !path.EndsWith(".sgr") && !path.EndsWith(".spr") ) {
+                App.Popups.ShowOk(this, "show-replay-list", "Not A Replay", "A valid replay will end with .spr or .sgr.", "Ok");
             } else {
                 this.mod.StartReplayRunner(path);
             }
         }
 
+        private void PlayScrollsGuideFromURL(String url) {
+            Match match = Regex.Match(url, "r/([0-9]+)", RegexOptions.IgnoreCase);
+            if( !match.Success ) {
+                App.Popups.ShowTextInput(this, url, "<color=red>Invalid Replay URL</color>", "reply-url", "ScrollsGuide Replay URL", "Enter an URL:", "View");
+                return;
+            }
+
+            int gameID = Convert.ToInt32(match.Groups[1].Value);
+            String path = String.Format("{0}{1}{2}.sgr", mod.replayLogger.replayFolder, Path.DirectorySeparatorChar, gameID);
+            int found = 0;
+
+            try {
+                WebClient wc = new WebClient();
+                wc.DownloadFile(new Uri(String.Format("http://a.scrollsguide.com/replay/download/{0}", gameID)), path);
+
+                if( File.Exists(path) ) {
+                    found += 1;
+                    replayPath = path;
+                }
+
+            } catch ( WebException we ) {
+                Console.WriteLine("***** WEBEXCEPTION {0}", we.ToString());
+                if( File.Exists(path) ) {
+                    File.Delete(path);
+                }
+            }
+
+            if( found == 0 ) {
+                App.Popups.ShowOk(this, "show-replay-list", "No Replay Found", "Sorry, we couldn't find any replays using the given URL.", "Ok");
+            } else if( found == 1 ) {
+                App.Popups.ShowOkCancel(this, "play-replay", "Found Replay", "We downloaded the replay, but ScrollsGuide replays don't support multi perspective. Click 'Play Replay' to view.", "Play Replay", "Cancel");
+            }
+        }
+
         public void PlayReplayFromURL(object arg) {
             String text = (String)arg;
+            if( text.Contains("scrollsguide.com") ) {
+                PlayScrollsGuideFromURL(text);
+                return;
+            }
 
             Match match = Regex.Match(text, "replay/([0-9]+)-(0|1)/|([0-9]+)-(0|1).spr|([0-9+])-(0|1)", RegexOptions.IgnoreCase);
             if( !match.Success ) {

@@ -26,8 +26,7 @@ namespace ScrollsPost {
 
         // WARNING: This is used for internal configs, please do not change it or it will cause bugs.
         // Change GetVersion() instead to not use the constant if it's needed.
-        private static int CURRENT_VERSION = 9;
-
+        private static int CURRENT_VERSION = 10;
 
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
@@ -69,6 +68,9 @@ namespace ScrollsPost {
                         
                 } else if( config.VersionBelow(9) ) {
                     new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)8);
+
+                } else if( config.VersionBelow(10) ) {
+                    new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)9);
                 }
             }
 

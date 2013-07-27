@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace ScrollsPost {
     public class ReplayRunner : IOkStringCancelCallback, IOkCancelCallback {
-        //private ScrollsPost.Mod mod;
+        private ScrollsPost.Mod mod;
         private String replayPrimaryPath;
         private String replaySecondaryPath;
         private String primaryType;
@@ -39,7 +39,12 @@ namespace ScrollsPost {
         private FieldInfo animFrameField;
 
         public ReplayRunner(ScrollsPost.Mod mod, String path) {
-            //this.mod = mod;
+            this.mod = mod;
+            // Convert a .sgr replay to .spr
+            if( path.EndsWith(".sgr") ) {
+                path = ConvertScrollsGuide(path);
+            }
+
             this.replayPrimaryPath = path;
             this.primaryType = path.EndsWith("-white.spr") ? "white" : "black";
 
@@ -459,6 +464,73 @@ namespace ScrollsPost {
             playerThread.Abort();
             App.Communicator.setData("");
             SceneLoader.loadScene("_Lobby");
+        }
+
+        // Convert a ScrollsGuide replay into ScrollsPost
+        private String ConvertScrollsGuide(String path) {
+            var metadata = new Dictionary<String, object>();
+            metadata["played-at"] = mod.TimeSinceEpoch();
+
+            var converted = new List<String>();
+
+            using( StreamReader sr = new StreamReader(path) ) {
+                while( sr.Peek() > 0 ) {
+                    String line = sr.ReadLine();
+                    if( String.IsNullOrEmpty(line) ) continue;
+
+                    // We need to figure out the metadata for the replay primarily
+                    if( line.Contains("ServerInfo") ) {
+                        var msg = new JsonReader().Read<Dictionary<String, object>>(line);
+                        metadata["version"] = msg["version"];
+                        metadata["format-version"] = msg["version"];
+                        continue;
+
+                    } else if( line.Contains("GameInfo") ) {
+                        var msg = new JsonReader().Read<Dictionary<String, object>>(line);
+
+                        metadata["white-name"] = msg["white"];
+                        metadata["white-id"] = (msg["whiteAvatar"] as Dictionary<String, object>)["profileId"];
+                        metadata["black-name"] = msg["black"];
+                        metadata["black-id"] = (msg["blackAvatar"] as Dictionary<String, object>)["profileId"];
+                        metadata["deck"] = msg["deck"];
+                        metadata["game-id"] = msg["gameId"];
+                        metadata["perspective"] = msg["color"];
+
+                    } else if( !metadata.ContainsKey("played-at") && line.Contains("\"msg\":\"Ping\"") ) {
+                        var msg = new JsonReader().Read<Dictionary<String, object>>(line);
+                        metadata["played-at"] = Math.Round(Convert.ToDouble(msg["time"]) / 1000);
+                    } else if( line.Contains("NewEffects") && line.Contains("\"EndGame\":{") ) {
+                        metadata["winner"] = line.Contains("\"winner\":\"white\"") ? "white" : "black";
+                    }
+
+                    float elapsed = 0f;
+                    if( line.Contains("NewEffect") ) {
+                        elapsed = 1.2f;
+                    } else if( line.Contains("GamechatMessage") ) {
+                        elapsed = 0.1f;
+                    } else if( line.Contains("CardInfo") ) {
+                        elapsed = 0.3f;
+                    } else if( !line.Contains("Ping") ) {
+                        elapsed = 0.2f;
+                    }
+         
+                    converted.Add(String.Format("elapsed|{0}|{1}", elapsed, line));
+                }
+            }
+
+            converted.Insert(0, String.Format("metadata|{0}", new JsonWriter().Write(metadata)));
+
+            String filename = String.Format("{0}-{1}.spr", metadata["game-id"], metadata["perspective"].Equals("white") ? 0 : 1);
+            String convertedPath = path.Replace(Path.GetFileName(path), filename);
+
+            File.WriteAllLines(convertedPath, converted.ToArray());
+            try {
+                File.Delete(path);
+            } catch( Exception e ) {
+                Console.WriteLine("***** EXCEPTION {0}", e.ToString());
+            }
+
+            return convertedPath;
         }
 
         // Check the format and see if we need to do any upgrading
