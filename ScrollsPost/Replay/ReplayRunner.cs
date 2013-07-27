@@ -163,7 +163,7 @@ namespace ScrollsPost {
             }
 
             // Faster
-            newSpeed = speed >= 0.50f ? Math.Min(0.75f, speed - 0.25f) : 0.25f;
+            newSpeed = speed > 0.25f ? Math.Min(0.75f, speed - 0.25f) : 0.25f;
 
             speedPos = new Rect(speedPos.x + speedPos.width + (container.width * 0.015f), speedPos.y, speedPos.width, speedPos.height);
             if( newSpeed > 0.25f && GUI.Button(speedPos, "Faster", this.speedButtonStyle) ) {
@@ -191,7 +191,7 @@ namespace ScrollsPost {
 
         public void OnBattleEffectDone(InvocationInfo info) {
             EffectMessage msg = (EffectMessage)effectField.GetValue(info.target);
-            if( msg.type.Equals("TurnBegin") ) {
+            if( msg != null && msg.type.Equals("TurnBegin") ) {
                 internalPause = false;
             }
         }
@@ -361,12 +361,12 @@ namespace ScrollsPost {
                 // Figure out units on board
                 foreach( var pair in units[side] ) {
                     var value = (Dictionary<String, object>)pair.Value;
+
                     var summon = (Dictionary<String, object>)value["SummonUnit"];
                     var card = (Dictionary<String, object>)summon["card"];
 
                     var tile = new Dictionary<String, object>();
-                    tile["typeId"] = card["typeId"].ToString();
-                    tile["isToken"] = card["isToken"];
+                    tile["card"] = card;
                     tile["position"] = pair.Key;
 
                     var stat = (Dictionary<String, object>)(stats[side][pair.Key] as Dictionary<String, object>)["StatsUpdate"];
@@ -502,6 +502,9 @@ namespace ScrollsPost {
                     if( effect.ContainsKey("CardPlayed") ) {
                         var played = (Dictionary<String, object>)effect["CardPlayed"];
                         var card = (Dictionary<String, object>)played["card"];
+                        if( !card.ContainsKey("isToken") )
+                            card["isToken"] = false;
+
                         cardInfo[String.Format("{0},{1}", played["color"], card["typeId"])] = card;
 
                     } else if( effect.ContainsKey("SummonUnit") ) {
@@ -551,20 +554,20 @@ namespace ScrollsPost {
             String[] secondaryUpgrade = new string[] {};
 
             using( StreamReader primary = new StreamReader(this.replayPrimaryPath) ) {
-                var metadata = PullMetadata(primary);
+                metadata = PullMetadata(primary);
                 primaryUpgrade = UpgradeFile(metadata, this.replayPrimaryPath, primary);
 
                 // Single perspective
                 if( String.IsNullOrEmpty(this.replaySecondaryPath) ) {
                     if( primaryUpgrade.Length == 0 )
-                        ParseStreams(metadata, primary);
+                        ParseStreams(primary);
                
                 // Multi perspective replay
                 } else {
                     using( StreamReader secondary = new StreamReader(this.replaySecondaryPath) ) {
                         secondaryUpgrade = UpgradeFile(PullMetadata(secondary), this.replaySecondaryPath, secondary);
                         if( primaryUpgrade.Length == 0 && secondaryUpgrade.Length == 0 ) {
-                            ParseStreams(metadata, primary, secondary);
+                            ParseStreams(primary, secondary);
                         }
                     }
                 }
@@ -586,7 +589,7 @@ namespace ScrollsPost {
         }
 
         // Handle pulling lines out of the replays for parsing
-        private void ParseStreams(Dictionary<String, object> metadata, StreamReader primary, StreamReader secondary=null) {
+        private void ParseStreams(StreamReader primary, StreamReader secondary=null) {
             // Sort out the IDs
             String primaryID;
             String secondaryID;

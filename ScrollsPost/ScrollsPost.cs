@@ -151,7 +151,7 @@ namespace ScrollsPost {
 
                 } else if( info.targetMethod.Equals("OnGUI") ) {
                     replayRunner.OnBattleGUI(info);
-
+                 
                 } else if( info.targetMethod.Equals("addDelay") ) {
                     if( replayRunner.OnBattleDelay(info) ) {
                         return true;
