@@ -468,6 +468,11 @@ namespace ScrollsPost {
             playerThread.Abort();
             App.Communicator.setData("");
             SceneLoader.loadScene("_Lobby");
+
+            // Leave the channel it puts us in now
+            if( metadata != null ) {
+                App.Communicator.sendRequest(new RoomExitMessage(String.Format("match-{0}", metadata["game-id"])));
+            }
         }
 
         // Convert a ScrollsGuide replay into ScrollsPost
