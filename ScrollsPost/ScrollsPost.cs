@@ -26,7 +26,7 @@ namespace ScrollsPost {
 
         // WARNING: This is used for internal configs, please do not change it or it will cause bugs.
         // Change GetVersion() instead to not use the constant if it's needed.
-        private static int CURRENT_VERSION = 8;
+        private static int CURRENT_VERSION = 9;
 
 
         public Mod() {
@@ -43,9 +43,6 @@ namespace ScrollsPost {
             cardSync = new CollectionSync(this);
             replayLogger = new ReplayLogger(this);
             //replayGUI = new ReplayGUI(this);
-
-            // Config migration + upgrades
-            config.MigratePath();
 
             // Added trade/sync notification
             if( config.VersionBelow(5) ) {
@@ -69,6 +66,9 @@ namespace ScrollsPost {
                     // Add replay support
                 } else if( config.VersionBelow(6) ) {
                     new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)5);
+                        
+                } else if( config.VersionBelow(9) ) {
+                    new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)8);
                 }
             }
 
@@ -115,9 +115,69 @@ namespace ScrollsPost {
             }
         }
 
-        public override bool BeforeInvoke(InvocationInfo info, out object returnValue) {
-            returnValue = null;
+        public override bool WantsToReplace(InvocationInfo info) {
+            if( info.targetMethod.Equals("sendRequest") && info.arguments[0] is RoomChatMessageMessage ) {
+                RoomChatMessageMessage msg = (RoomChatMessageMessage)info.arguments[0];
+                if( msg.text.Equals("/sp") || msg.text.Equals("/scrollspost") || msg.text.Equals("/scrollpost") ) {
+                    new Thread(new ThreadStart(configGUI.Show)).Start();
 
+                    SendMessage("Configuration opened");
+                    return true;
+
+                } else if( msg.text.StartsWith("/pc-1h ") ) {
+                    new PriceCheck(this, "1-hour", msg.text.Split(new char[] { ' ' }, 2)[1]);
+                    return true;
+
+                } else if( msg.text.StartsWith("/pc-3d ") ) {
+                    new PriceCheck(this, "3-days", msg.text.Split(new char[] { ' ' }, 2)[1]);
+                    return true;
+
+                } else if( msg.text.StartsWith("/pc-7d ") ) {
+                    new PriceCheck(this, "7-days", msg.text.Split(new char[] { ' ' }, 2)[1]);
+                    return true;
+
+                } else if( msg.text.StartsWith("/pc ") || msg.text.StartsWith("/pc-1d ") ) {
+                    new PriceCheck(this, "1-day", msg.text.Split(new char[] { ' ' }, 2)[1]);
+                    return true;
+                }
+            } else if( replayRunner != null ) {
+                if( info.targetMethod.Equals("handleNextMessage") ) {
+                    if( replayRunner.OnHandleNextMessage() ) {
+                        return true;
+                    }
+
+                } else if( info.targetMethod.Equals("UpdateOnly") ) {
+                    replayRunner.OnAnimationUpdate(info);
+
+                } else if( info.targetMethod.Equals("OnGUI") ) {
+                    replayRunner.OnBattleGUI(info);
+
+                } else if( info.targetMethod.Equals("addDelay") ) {
+                    if( replayRunner.OnBattleDelay(info) ) {
+                        return true;
+                    }
+
+                } else if( info.targetMethod.Equals("Launch") ) {
+                    replayRunner.OnTweenLaunch(info);
+
+                } else if( info.targetMethod.Equals("toggleMenu") ) {
+                    StopReplayRunner();
+                    return true;
+
+                } else if( info.targetMethod.Equals("effectDone") ) {
+                    replayRunner.OnBattleEffectDone(info);
+
+                } else if( info.targetMethod.Equals("ShowEndTurn") ) {
+                    if( replayRunner.OnBattleUIShowEndTurn(info) ) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public override void BeforeInvoke(InvocationInfo info) {
             if( info.targetMethod.Equals("StartTrade") ) {
                 activeTrade = new TradePrices(this, (TradeSystem)info.target);
             
@@ -131,37 +191,10 @@ namespace ScrollsPost {
             } else if( info.targetMethod.Equals("updateGraphics") && activeTrade != null ) {
                 activeTrade.PreOverlayRender((Card)info.arguments[0]);
 
-            } else if( info.targetMethod.Equals("sendRequest") ) {
-                if( info.arguments[0] is RoomChatMessageMessage ) {
-                    RoomChatMessageMessage msg = (RoomChatMessageMessage)info.arguments[0];
-                    if( msg.text.Equals("/sp") || msg.text.Equals("/scrollspost") || msg.text.Equals("/scrollpost") ) {
-                        new Thread(new ThreadStart(configGUI.Show)).Start();
-
-                        SendMessage("Configuration opened");
-                        return true;
-
-                    } else if( msg.text.StartsWith("/pc-1h ") ) {
-                        new PriceCheck(this, "1-hour", msg.text.Split(new char[] { ' ' }, 2)[1]);
-                        return true;
-
-                    } else if( msg.text.StartsWith("/pc-3d ") ) {
-                        new PriceCheck(this, "3-days", msg.text.Split(new char[] { ' ' }, 2)[1]);
-                        return true;
-
-                    } else if( msg.text.StartsWith("/pc-7d ") ) {
-                        new PriceCheck(this, "7-days", msg.text.Split(new char[] { ' ' }, 2)[1]);
-                        return true;
-
-                    } else if( msg.text.StartsWith("/pc ") || msg.text.StartsWith("/pc-1d ") ) {
-                        new PriceCheck(this, "1-day", msg.text.Split(new char[] { ' ' }, 2)[1]);
-                        return true;
-                    }
-               
-                    // Do our initial login check
-                } else if( !loggedIn && info.arguments[0] is RoomEnterFreeMessage ) {
-                    loggedIn = true;
-                    Init();
-                }
+            // Do our initial login check
+            } else if( !loggedIn && info.targetMethod.Equals("sendRequest") && info.arguments[0] is RoomEnterFreeMessage ) {
+                loggedIn = true;
+                Init();
 
             // Replay UI
             //} else if( info.targetMethod.Equals("Start") && App.SceneValues.profilePage.isMe() ) {
@@ -169,47 +202,7 @@ namespace ScrollsPost {
            
             //} else if( info.targetMethod.Equals("drawEditButton") ) {
             //    replayGUI.Hide();
-
-            // Replay handler
-            } else if( replayRunner != null ) {
-                if( info.targetMethod.Equals("handleNextMessage") ) {
-                    if( replayRunner.OnHandleNextMessage() ) {
-                        returnValue = true;
-                        return true;
-                    }
-
-                } else if( info.targetMethod.Equals("UpdateOnly") ) {
-                    replayRunner.OnAnimationUpdate(info);
-
-                } else if( info.targetMethod.Equals("OnGUI") ) {
-                    replayRunner.OnBattleGUI(info);
-                
-                } else if( info.targetMethod.Equals("addDelay") ) {
-                    if( replayRunner.OnBattleDelay(info) ) {
-                        returnValue = null;
-                        return true;
-                    }
-                
-                } else if( info.targetMethod.Equals("Launch") ) {
-                    replayRunner.OnTweenLaunch(info);
-
-                } else if( info.targetMethod.Equals("toggleMenu") ) {
-                    StopReplayRunner();
-                    returnValue = null;
-                    return true;
-
-                } else if( info.targetMethod.Equals("effectDone") ) {
-                    replayRunner.OnBattleEffectDone(info);
-
-                } else if( info.targetMethod.Equals("ShowEndTurn") ) {
-                    if( replayRunner.OnBattleUIShowEndTurn(info) ) {
-                        returnValue = null;
-                        return true;
-                    }
-                }
             }
-
-            return false;
         }
 
         public override void AfterInvoke(InvocationInfo info, ref object returnValue) {
@@ -249,7 +242,7 @@ namespace ScrollsPost {
             RoomChatMessageMessage msg = new RoomChatMessageMessage();
             msg.from = GetName();
             msg.text = message;
-            msg.roomName = App.ArenaChat.ChatRooms.GetCurrentRoom();
+            msg.roomName = App.ArenaChat.ChatRooms.GetCurrentRoom().name;
 
             App.ChatUI.handleMessage(msg);
             App.ArenaChat.ChatRooms.ChatMessage(msg);

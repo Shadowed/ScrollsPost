@@ -31,7 +31,7 @@ namespace ScrollsPost {
 
                 inventoryCards.Clear();
                 foreach( Card card in viewMsg.cards ) {
-                    inventoryCards[card.id] = String.Format("{0},{1}", card.typeId, card.isTradable() ? 1 : 0);
+                    inventoryCards[card.id] = String.Format("{0},{1}", card.typeId, card.tradable ? 1 : 0);
                 }
 
                 if( dataPusher == null ) {

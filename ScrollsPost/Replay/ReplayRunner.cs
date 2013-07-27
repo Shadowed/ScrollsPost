@@ -133,6 +133,7 @@ namespace ScrollsPost {
             }
 
             // Go to Round
+            /*
             Rect goToPos = new Rect(pos.x + pos.width + 6f, pos.y, pos.width, pos.height);
 
             String label = "Go To";
@@ -144,6 +145,7 @@ namespace ScrollsPost {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 App.Popups.ShowTextInput(this, "", "Turn 1 = First Player Round 1 / Turn 2 = Second Player Round 2 / Turn 3 = First Player Round 2 and so on.", "turn", "Turn Seek", "Enter a Turn:", "Seek");
             }
+            */
 
             // Speed changes
             Rect speedPos = new Rect(pos.x, pos.y + pos.height + 8f, (container.width * 0.90f) * 0.32f, pos.height);

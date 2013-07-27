@@ -56,6 +56,8 @@ namespace ScrollsPost {
             } else if( version == 6 ) {
                 Thread.Sleep(1000);
                 App.Popups.ShowScrollText(this, "done", "ScrollsPost v1.0.6 - Fixes", "* This popup will no longer keep showing up each time you login\n\n* Instant seeking! Replay seeking is now instant no matter what round you want to go to\n\n* Improved the replay list with sorting by date + increased size\n\n* Improved viewpoint handling, if we have both viewpoints available, [VP] shows up next to both names the replay shows up once\n\n* Improved replay searching for multi-hand replays, now always checks your replay folder for the other viewpoint even when playing from a file\n\n* Improved replay controls, uses slower/normal/faster for speed instead of confusing percentages\n\n* Real time replays are now disabled by default, capped at 1.1 seconds per turn. You can enable them through replay controls\n\n* Added colored player names to make the replay list easier to read\n\n* Added replay uploading through the replay list, with a tag to show replays you haven't uploaded yet\n\n* Added replay playing by URL, automatically downloads both viewpoints when available to view multi-hand replays\n\n* Fixed replay controls covering the resource #s under certain screen resolutions\n\n* Fixed disconnects causing the replay logger to break\n\n* Fixed the initial load in of a replay looking buggy\n\n* Fixed collection syncing being messed up by trading (when it's enabled)", "Done");
+            } else if( version == 8 ) {
+                App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.7 - Fixes", "This is a quick release to get ScrollsPost working with the new Summoner update.\n\nInstant skip to turn is not back yet, but it will be soon. You might have issues playing old replays, which will also be fixed soon.\nIf you run into any new issues, let me know at shadow@scrollspost.com", "Done");
             }
         }
 
@@ -280,22 +282,11 @@ namespace ScrollsPost {
         public void UploadReplay(object path) {
             String replayPath = (String)path;
 
-            // Check if it was uploaded already
-            if( File.Exists(mod.replayLogger.uploadCachePath) ) {
-                String line = String.Format("{0}=1", Path.GetFileName(replayPath));
-                using( StreamReader sr = new StreamReader(mod.replayLogger.uploadCachePath) ) {
-                    if( sr.ReadLine().Equals(line) ) {
-                        App.Popups.ShowOk(this, "show-replay-list", "Replay Uploaded", "You've already uploaded this replay and don't need to reupload it.", "Ok");
-                        return;
-                    }
-                }
-            }
-
             App.Popups.ShowInfo("ScrollsPost Replay", "We're uploading your replay, this will only take a minute.");
             Dictionary<String, object> response = mod.replayLogger.Upload(replayPath);
 
             if( response.ContainsKey("url") ) {
-                App.Popups.ShowTextInput(this, (String)response["url"], "", "show-replay-list", "Replay Uploaded!", "URL:", "Done");
+                App.Popups.ShowTextInput(this, (response["url"] as String).Replace("scrollspost/", "scrollspost.com/"), "", "show-replay-list", "Replay Uploaded!", "URL:", "Done");
             } else if( response["error"].Equals("game_too_short") ) {
                 App.Popups.ShowOk(this, "show-replay-list", "Replay Failed", "We were unable to upload the replay as it was too short and didn't have enough rounds played.", "Ok");
             } else {

@@ -6,14 +6,14 @@ using JsonFx.Json;
 
 namespace ScrollsPost {
     public class ConfigManager {
-        private ScrollsPost.Mod mod;
+        //private ScrollsPost.Mod mod;
         private String configPath;
         private Dictionary<String, object> config;
         private Boolean newInstall;
         private Thread writer;
 
         public ConfigManager(ScrollsPost.Mod mod) {
-            this.mod = mod;
+            //this.mod = mod;
 
             // Setup the directory to start with
             String path = mod.OwnFolder() + Path.DirectorySeparatorChar + "config";
@@ -23,17 +23,6 @@ namespace ScrollsPost {
 
             configPath = String.Format("{0}{1}config{1}{2}.json", mod.OwnFolder(), Path.DirectorySeparatorChar, App.MyProfile.ProfileInfo.id);
 
-            Load();
-        }
-
-        public void MigratePath() {
-            String oldPath = mod.OwnFolder() + Path.DirectorySeparatorChar + "config" + Path.DirectorySeparatorChar + "config.json";
-            if( !File.Exists(oldPath) )
-                return;
-
-            File.Move(oldPath, this.configPath);
-
-            newInstall = false;
             Load();
         }
 

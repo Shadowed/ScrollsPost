@@ -196,9 +196,9 @@ namespace ScrollsPost {
                     using( StreamReader rs = new StreamReader(wres.GetResponseStream()) ) {
                         String contents = rs.ReadToEnd();
                         Dictionary<String, object> response = new JsonReader().Read<Dictionary<String, object>>(contents);
-
+                            
                         if( response.ContainsKey("url") ) {
-                            mod.SendMessage(String.Format("Finished uploading replay to ScrollsPost. Can be found at {0}", response["url"]));
+                            mod.SendMessage(String.Format("Finished uploading replay to ScrollsPost. Can be found at {0}", (response["url"] as String).Replace("scrollspost/", "scrollspost.com/")));
                             LogUploaded(path);
                         } else if( response["error"].Equals("game_too_short") ) {
                             mod.SendMessage("Replay rejected as it was too short, must go beyond 1 round to be uploaded.");
