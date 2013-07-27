@@ -257,6 +257,9 @@ namespace ScrollsPost {
         public void PopupOk(String type, String choice) {
             if( type == "turn" ) {
                 seekTurn = Convert.ToInt16(choice);
+                if( seekTurn <= 1 )
+                    seekTurn = 1;
+
                 rewind = true;
                 internalPause = false;
             }
@@ -456,6 +459,7 @@ namespace ScrollsPost {
             while( internalPause ) {
                 Thread.Sleep(10);
             }
+
         }
 
         // Stop a replay
@@ -520,7 +524,7 @@ namespace ScrollsPost {
 
             converted.Insert(0, String.Format("metadata|{0}", new JsonWriter().Write(metadata)));
 
-            String filename = String.Format("{0}-{1}.spr", metadata["game-id"], metadata["perspective"].Equals("white") ? 0 : 1);
+            String filename = String.Format("{0}-{1}.spr", metadata["game-id"], metadata["perspective"]);
             String convertedPath = path.Replace(Path.GetFileName(path), filename);
 
             File.WriteAllLines(convertedPath, converted.ToArray());
@@ -673,7 +677,7 @@ namespace ScrollsPost {
                 secondaryID = (String)metadata["white-id"];
             }
 
-            if( seekTurn > 0 ) {
+            if( seekTurn > 1 ) {
                 CoalesceEvents(primary);
             }
 

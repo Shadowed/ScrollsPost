@@ -183,7 +183,7 @@ namespace ScrollsPost {
 
                         Dictionary<String, object> metadata = new JsonReader().Read<Dictionary<String, object>>(line);
                         // If we have a multi viewpoint replay, only show the white one as that's the person who plays first
-                        Boolean status = gameIDs[(String)metadata["game-id"]];
+                        Boolean status = gameIDs[metadata["game-id"].ToString()];
                         if( status == true && !metadata["perspective"].Equals("white") ) {
                             continue;
                         }
