@@ -34,6 +34,7 @@ namespace ScrollsPost {
         private GUIStyle realTimeButtonStyle;
 
         private MethodInfo deselectMethod;
+        private MethodInfo tweenLaunchMethod;
         private FieldInfo effectField;
         //private FieldInfo speedField;
         private FieldInfo animFrameField;
@@ -102,6 +103,9 @@ namespace ScrollsPost {
         public void OnBattleGUI(InvocationInfo info) {
             // Bugs out visually otherwise
             deselectMethod.Invoke(info.target, null);
+
+            // For recalling the original method
+            tweenLaunchMethod = typeof(iTween).GetMethod("Launch", BindingFlags.NonPublic | BindingFlags.Static);
 
             // For managing the replay
             int depth = GUI.depth;
@@ -189,9 +193,9 @@ namespace ScrollsPost {
         public Boolean OnBattleUIShowEndTurn(InvocationInfo info) {
             return true;
         }
-        
-        public Boolean OnBattleDelay(InvocationInfo info) {
-            return speed < 0.50f;
+
+        public Boolean SpeedUpGame() {
+            return speed <= 0.50f;
         }
 
         public void OnBattleEffectDone(InvocationInfo info) {
@@ -203,21 +207,26 @@ namespace ScrollsPost {
 
         
         public void OnAnimationUpdate(InvocationInfo info) {
-            if( speed < 0.50f ) {
-                float frame = (info.target as AnimPlayer).getFrameAnimation().getNumFrames() * 2f;
-                if( ((float)animFrameField.GetValue(info.target)) < frame ) {
-                    animFrameField.SetValue(info.target, frame);
-                }
+            if( !SpeedUpGame() )
+                return;
+
+            var animation = (info.target as AnimPlayer).getFrameAnimation();
+            if( animation == null )
+                return;
+
+            float frame = animation.getNumFrames() * 2f;
+            if( ((float)animFrameField.GetValue(info.target)) < frame ) {
+                animFrameField.SetValue(info.target, frame);
             }
         }
 
         public void OnTweenLaunch(InvocationInfo info) {
-            if( speed < 0.50f ) {
-                Hashtable args = (Hashtable)info.arguments[1];
-                if( args.ContainsKey("time") ) {
-                    args["time"] = 0.0f;
-                }
+            Hashtable args = (Hashtable)info.arguments[1];
+            if( args.ContainsKey("time") ) {
+                args["time"] = 0.0f;
             }
+
+            tweenLaunchMethod.Invoke(null, info.arguments);
         }
 
         private void Delay(int ms) {
@@ -471,7 +480,7 @@ namespace ScrollsPost {
 
             // Leave the channel it puts us in now
             if( metadata != null ) {
-                App.Communicator.sendRequest(new RoomExitMessage(String.Format("match-{0}", metadata["game-id"])));
+                App.ArenaChat.RoomExit(new Room(String.Format("match-{0}", metadata["game-id"]), RoomType.ChatRoom), false);
             }
         }
 

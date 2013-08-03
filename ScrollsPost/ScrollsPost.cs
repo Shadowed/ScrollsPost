@@ -21,6 +21,8 @@ namespace ScrollsPost {
         public ReplayRunner replayRunner;
         //private ReplayGUI replayGUI;
 
+        private Boolean nextReturnVal = false;
+
         public String apiURL = "http://api.scrollspost.com/";
         //public String apiURL = "http://localhost:5000/api/";
 
@@ -44,11 +46,6 @@ namespace ScrollsPost {
             //replayGUI = new ReplayGUI(this);
 
             // Added trade/sync notification
-            if( config.VersionBelow(5) ) {
-                config.Add("trade", true);
-                config.Add("sync-notif", false);
-            }
-
             if( !config.ContainsKey("replay") ) {
                 config.Add("replay", "ask");
             }
@@ -118,65 +115,72 @@ namespace ScrollsPost {
         }
 
         public override bool WantsToReplace(InvocationInfo info) {
+            nextReturnVal = false;
+
+            if( info.targetMethod.Equals("sendRequest") && info.arguments[0] is RoomChatMessageMessage ) {
+                RoomChatMessageMessage msg = (RoomChatMessageMessage)info.arguments[0];
+                if( msg.text.Equals("/sp") || msg.text.Equals("/scrollspost") || msg.text.Equals("/scrollpost") || msg.text.StartsWith("/pc") ) {
+                    nextReturnVal = true;
+                    return true;
+                }
+            } else if( replayRunner != null ) {
+                if( info.targetMethod.Equals("handleNextMessage") ) {
+                    if( replayRunner.OnHandleNextMessage() ) {
+                        nextReturnVal = true;
+                        return true;
+                    }
+
+                } else if( info.targetMethod.Equals("addDelay") ) {
+                    if( replayRunner.SpeedUpGame() ) {
+                        nextReturnVal = true;
+                        return true;
+                    }
+
+                } else if( info.targetMethod.Equals("toggleMenu") ) {
+                    nextReturnVal = true;
+                    return true;
+
+                } else if( info.targetMethod.Equals("ShowEndTurn") ) {
+                    if( replayRunner.OnBattleUIShowEndTurn(info) ) {
+                        nextReturnVal = true;
+                        return true;
+                    }
+                } else if( info.targetMethod.Equals("Launch") && replayRunner.SpeedUpGame() ) {
+                    nextReturnVal = true;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public override void ReplaceMethod(InvocationInfo info, out object returnValue) {
+            returnValue = nextReturnVal;
+
             if( info.targetMethod.Equals("sendRequest") && info.arguments[0] is RoomChatMessageMessage ) {
                 RoomChatMessageMessage msg = (RoomChatMessageMessage)info.arguments[0];
                 if( msg.text.Equals("/sp") || msg.text.Equals("/scrollspost") || msg.text.Equals("/scrollpost") ) {
                     new Thread(new ThreadStart(configGUI.Show)).Start();
 
                     SendMessage("Configuration opened");
-                    return true;
-
                 } else if( msg.text.StartsWith("/pc-1h ") ) {
                     new PriceCheck(this, "1-hour", msg.text.Split(new char[] { ' ' }, 2)[1]);
-                    return true;
-
                 } else if( msg.text.StartsWith("/pc-3d ") ) {
                     new PriceCheck(this, "3-days", msg.text.Split(new char[] { ' ' }, 2)[1]);
-                    return true;
-
                 } else if( msg.text.StartsWith("/pc-7d ") ) {
                     new PriceCheck(this, "7-days", msg.text.Split(new char[] { ' ' }, 2)[1]);
-                    return true;
 
                 } else if( msg.text.StartsWith("/pc ") || msg.text.StartsWith("/pc-1d ") ) {
                     new PriceCheck(this, "1-day", msg.text.Split(new char[] { ' ' }, 2)[1]);
-                    return true;
                 }
+
             } else if( replayRunner != null ) {
-                if( info.targetMethod.Equals("handleNextMessage") ) {
-                    if( replayRunner.OnHandleNextMessage() ) {
-                        return true;
-                    }
-
-                } else if( info.targetMethod.Equals("UpdateOnly") ) {
-                    replayRunner.OnAnimationUpdate(info);
-
-                } else if( info.targetMethod.Equals("OnGUI") ) {
-                    replayRunner.OnBattleGUI(info);
-                 
-                } else if( info.targetMethod.Equals("addDelay") ) {
-                    if( replayRunner.OnBattleDelay(info) ) {
-                        return true;
-                    }
-
+                if( info.targetMethod.Equals("toggleMenu") ) {
+                    StopReplayRunner();
                 } else if( info.targetMethod.Equals("Launch") ) {
                     replayRunner.OnTweenLaunch(info);
-
-                } else if( info.targetMethod.Equals("toggleMenu") ) {
-                    StopReplayRunner();
-                    return true;
-
-                } else if( info.targetMethod.Equals("effectDone") ) {
-                    replayRunner.OnBattleEffectDone(info);
-
-                } else if( info.targetMethod.Equals("ShowEndTurn") ) {
-                    if( replayRunner.OnBattleUIShowEndTurn(info) ) {
-                        return true;
-                    }
                 }
             }
-
-            return false;
         }
 
         public override void BeforeInvoke(InvocationInfo info) {
@@ -198,12 +202,14 @@ namespace ScrollsPost {
                 loggedIn = true;
                 Init();
 
-            // Replay UI
-            //} else if( info.targetMethod.Equals("Start") && App.SceneValues.profilePage.isMe() ) {
-            //    replayGUI.Show();
-           
-            //} else if( info.targetMethod.Equals("drawEditButton") ) {
-            //    replayGUI.Hide();
+            } else if( replayRunner != null ) {
+                if( info.targetMethod.Equals("OnGUI") ) {
+                    replayRunner.OnBattleGUI(info);
+                } else if( info.targetMethod.Equals("UpdateOnly") ) {
+                    replayRunner.OnAnimationUpdate(info);
+                } else if( info.targetMethod.Equals("effectDone") ) {
+                    replayRunner.OnBattleEffectDone(info);
+                }
             }
         }
 
