@@ -120,7 +120,7 @@ namespace ScrollsPost {
             GUI.depth = depth - 4;
 
             // Draw the header
-            Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.14f);
+            Rect pos = new Rect(container.x + (container.width * 0.08f), container.y + 3f, container.width, container.height * 0.20f);
             //Rect pos = new Rect(container.x * 1.09f, container.y * 1.01f, container.width, container.height * 0.50f);
 
             int fontSize = GUI.skin.label.fontSize;
@@ -132,7 +132,7 @@ namespace ScrollsPost {
             GUI.skin.label.fontSize = fontSize;
 
             // Start/Pause
-            pos = new Rect(container.x * 1.04f, pos.y + pos.height + 10f, container.width * 0.43f, container.height * 0.20f);
+            pos = new Rect(container.x + (container.width * 0.04f), pos.y + pos.height + 10f, container.width * 0.44f, container.height * 0.20f);
             //pos = new Rect(container.x * 1.06f, pos.y + pos.height - 6f, container.width * 0.90f, container.height * 0.0f);
             if( GUI.Button(pos, paused ? "Play" : "Pause", this.buttonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
@@ -165,7 +165,7 @@ namespace ScrollsPost {
             }
 
             // Normal
-            speedPos = new Rect(speedPos.x + speedPos.width + (container.width * 0.015f), speedPos.y, speedPos.width, speedPos.height);
+            speedPos = new Rect(speedPos.x + speedPos.width + (container.width * 0.028f), speedPos.y, speedPos.width, speedPos.height);
             if( GUI.Button(speedPos, "Normal", this.speedButtonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 speed = 1;
@@ -174,14 +174,14 @@ namespace ScrollsPost {
             // Faster
             newSpeed = speed > 0.25f ? Math.Min(0.75f, speed - 0.25f) : 0.25f;
 
-            speedPos = new Rect(speedPos.x + speedPos.width + (container.width * 0.015f), speedPos.y, speedPos.width, speedPos.height);
+            speedPos = new Rect(speedPos.x + speedPos.width + (container.width * 0.028f), speedPos.y, speedPos.width, speedPos.height);
             if( newSpeed > 0.25f && GUI.Button(speedPos, "Faster", this.speedButtonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 speed = newSpeed;
             }
 
             // Speed cap
-            pos = new Rect(pos.x, speedPos.y + pos.height + 8f, container.width * 0.90f, pos.height);
+            pos = new Rect(pos.x, speedPos.y + pos.height + 8f, container.width * 0.92f, pos.height);
             if( GUI.Button(pos, realtime ? "Disable Real Time" : "Enable Real Time", this.realTimeButtonStyle) ) {
                 App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 realtime = !realtime;

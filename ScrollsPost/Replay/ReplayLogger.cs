@@ -127,7 +127,7 @@ namespace ScrollsPost {
 
         // Handle replay uploading
         public void PopupCancel(String type) {
-            mod.SendMessage("Replay will not be uploaded, you can always manually upload it later if you change your mind.");
+            mod.SendMessage("Replay will not be uploaded, you can always manually upload it later if you change your mind. Go to /sp -> Replay List to manually upload.");
         }
 
         public void PopupOk(String type) {
@@ -199,7 +199,7 @@ namespace ScrollsPost {
                         Dictionary<String, object> response = new JsonReader().Read<Dictionary<String, object>>(contents);
                             
                         if( response.ContainsKey("url") ) {
-                            mod.SendMessage(String.Format("Finished uploading replay to ScrollsPost. Can be found at {0}", (response["url"] as String).Replace("scrollspost/", "scrollspost.com/")));
+                            mod.SendMessage(String.Format("Finished uploading replay to ScrollsPost. Can be found at {0}, or by typing /sp and going to Replay List.", (response["url"] as String).Replace("scrollspost/", "scrollspost.com/")));
                             LogUploaded(path);
                         } else if( response["error"].Equals("game_too_short") ) {
                             mod.SendMessage("Replay rejected as it was too short, must go beyond 1 round to be uploaded.");
