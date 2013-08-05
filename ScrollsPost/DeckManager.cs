@@ -45,7 +45,7 @@ namespace ScrollsPost {
             }
 
             var url = String.Format("http://www.scrollspost.com/deckbuilder#{0}", String.Join(";", cards.ToArray()));
-            App.Popups.ShowTextInput(this, url, "", "Above URL can be shared or imported in-game", "Deck Export", "Deck Builder URL:", "Ok");
+            App.Popups.ShowTextInput(this, url, "Above URL can be shared or imported in-game", "export", "Deck Export", "Deck Builder URL:", "Ok");
         }
 
         private void ImportDeck(String url) {
