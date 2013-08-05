@@ -49,17 +49,12 @@ namespace ScrollsPost {
 
         public void ShowChanges(object ver) {
             int version = (int) ver;
-            if( version == 4 ) {
-                App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.4", "Mod updated to v1.0.4\n\n1) You can now disable inline trade prices, handy if your computer is older and you experience lag issues.\n2) You can now be notified every time your collection is synced via a chat message.\n3)Initial syncs will always show a message to reduce confusion.", "Done");
-            } else if( version == 5 ) {
-                App.Popups.ShowOk(this, "show-replay", "ScrollsPost v1.0.5 - Replays!", "ScrollsPost now has full replay support with the ability to view both player hands (when available), fast forward to turns, and automatic upload (when enabled).\n\nClick Configure to setup your preferences for Replays.\nYou can view your replays by typing /sp.", "Configure");
-            } else if( version == 6 ) {
-                Thread.Sleep(1000);
-                App.Popups.ShowScrollText(this, "done", "ScrollsPost v1.0.6 - Fixes", "* This popup will no longer keep showing up each time you login\n\n* Instant seeking! Replay seeking is now instant no matter what round you want to go to\n\n* Improved the replay list with sorting by date + increased size\n\n* Improved viewpoint handling, if we have both viewpoints available, [VP] shows up next to both names the replay shows up once\n\n* Improved replay searching for multi-hand replays, now always checks your replay folder for the other viewpoint even when playing from a file\n\n* Improved replay controls, uses slower/normal/faster for speed instead of confusing percentages\n\n* Real time replays are now disabled by default, capped at 1.1 seconds per turn. You can enable them through replay controls\n\n* Added colored player names to make the replay list easier to read\n\n* Added replay uploading through the replay list, with a tag to show replays you haven't uploaded yet\n\n* Added replay playing by URL, automatically downloads both viewpoints when available to view multi-hand replays\n\n* Fixed replay controls covering the resource #s under certain screen resolutions\n\n* Fixed disconnects causing the replay logger to break\n\n* Fixed the initial load in of a replay looking buggy\n\n* Fixed collection syncing being messed up by trading (when it's enabled)", "Done");
-            } else if( version == 8 ) {
+            if( version == 8 ) {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.7 - Fixes", "This is a quick release to get ScrollsPost working with the new Summoner update.\n\nInstant skip to turn is not back yet, but it will be soon. You might have issues playing old replays, which will also be fixed soon.\nIf you run into any new issues, let me know at shadow@scrollspost.com", "Done");
             } else if( version == 9 ) {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.9", "* Instant seeking and speed controls are back!\n* You can now play replays from older versions of Scrolls\n* You can now play ScrollsGuide replays (either by file or ScrollsGuide URL) including pre-0.96 replays", "Done");
+            } else if( version == 10 ) {
+                App.Popups.ShowOk(this, "done", "ScrollsPost v1.1.0", "ScrollsPost now has Deck Builder support!\n\n* Build decks on ScrollsPost.com and import them in-game, or share them to others\n* Easily import decks from ScrollsPost.com in-game\n* Export your in-game decks to quickly share new decks with others", "Done");
             }
         }
 

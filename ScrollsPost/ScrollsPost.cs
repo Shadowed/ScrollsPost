@@ -19,8 +19,11 @@ namespace ScrollsPost {
         public CollectionSync cardSync;
         public ReplayLogger replayLogger;
         public ReplayRunner replayRunner;
+        public DeckManager deckManager;
         //private ReplayGUI replayGUI;
 
+        private Type deckType;
+        private Type battleType;
         private Boolean nextReturnVal = false;
 
         public String apiURL = "http://api.scrollspost.com/";
@@ -28,7 +31,7 @@ namespace ScrollsPost {
 
         // WARNING: This is used for internal configs, please do not change it or it will cause bugs.
         // Change GetVersion() instead to not use the constant if it's needed.
-        private static int CURRENT_VERSION = 10;
+        private static int CURRENT_VERSION = 11;
 
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
@@ -43,7 +46,11 @@ namespace ScrollsPost {
             configGUI = new ConfigGUI(this);
             cardSync = new CollectionSync(this);
             replayLogger = new ReplayLogger(this);
+            deckManager = new DeckManager(this);
             //replayGUI = new ReplayGUI(this);
+
+            battleType = typeof(BattleMode);
+            deckType = typeof(DeckBuilder2);
 
             // Added trade/sync notification
             if( !config.ContainsKey("replay") ) {
@@ -56,18 +63,12 @@ namespace ScrollsPost {
             } else if( !config.ContainsKey("conf-version") ) {
                 new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
             } else {
-                // Replay updates
-                if( config.VersionBelow(7) ) {
-                    new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)6);
-                    // Add replay support
-                } else if( config.VersionBelow(6) ) {
-                    new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)5);
-                        
-                } else if( config.VersionBelow(9) ) {
+                if( config.VersionBelow(9) ) {
                     new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)8);
-
                 } else if( config.VersionBelow(10) ) {
                     new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)9);
+                } else if( config.VersionBelow(11) ) {
+                    new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)10);
                 }
             }
 
@@ -105,6 +106,8 @@ namespace ScrollsPost {
                     scrollsTypes["BattleMode"].Methods.GetMethod("OnGUI")[0],
                     scrollsTypes["BattleModeUI"].Methods.GetMethod("ShowEndTurn")[0],
                     scrollsTypes["GUIBattleModeMenu"].Methods.GetMethod("toggleMenu")[0],
+
+                    scrollsTypes["DeckBuilder2"].Methods.GetMethod("OnGUI")[0]
 
                     //scrollsTypes["ProfileMenu"].Methods.GetMethod("Start")[0],
                 };
@@ -203,7 +206,7 @@ namespace ScrollsPost {
                 Init();
 
             } else if( replayRunner != null ) {
-                if( info.targetMethod.Equals("OnGUI") ) {
+                if( info.targetMethod.Equals("OnGUI") && info.target.GetType() == battleType ) {
                     replayRunner.OnBattleGUI(info);
                 } else if( info.targetMethod.Equals("UpdateOnly") ) {
                     replayRunner.OnAnimationUpdate(info);
@@ -218,6 +221,8 @@ namespace ScrollsPost {
                 activeTrade.PostOverlayRender((Card)info.arguments[0]);
             } else if( activeTrade != null && info.targetMethod.Equals("UpdateView") ) {
                 activeTrade.PostUpdateView();
+            } else if( info.targetMethod.Equals("OnGUI") && info.target.GetType() == deckType ) {
+                deckManager.OnGUI(info.target as DeckBuilder2);
             }
 
             return;

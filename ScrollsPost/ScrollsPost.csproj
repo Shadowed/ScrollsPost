@@ -72,6 +72,7 @@
     <Compile Include="Replay\ReplayLogger.cs" />
     <Compile Include="Replay\ReplayRunner.cs" />
     <Compile Include="Replay\ReplayGUI.cs" />
+    <Compile Include="DeckManager.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>
