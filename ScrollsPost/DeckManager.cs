@@ -33,7 +33,7 @@ namespace ScrollsPost {
             }
 
             if( compiledDeck.Count == 0 ) {
-                App.Popups.ShowOk(this, "", "No Cards", "You can't export a deck without any cards in it.", "Ok");
+                App.Popups.ShowOk(this, "", "No Cards", "You must add at least one card in order to export a dekc.", "Ok");
                 return;
             }
 
