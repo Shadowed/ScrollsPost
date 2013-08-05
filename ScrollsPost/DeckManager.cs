@@ -34,6 +34,7 @@ namespace ScrollsPost {
 
             if( compiledDeck.Count == 0 ) {
                 App.Popups.ShowOk(this, "", "No Cards", "You can't export a deck without any cards in it.", "Ok");
+                return;
             }
 
             var cards = new List<String>();
