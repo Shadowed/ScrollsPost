@@ -33,7 +33,7 @@ namespace ScrollsPost {
             }
 
             if( compiledDeck.Count == 0 ) {
-                App.Popups.ShowOk(this, "", "No Cards", "You must add at least one card in order to export a dekc.", "Ok");
+                App.Popups.ShowOk(this, "", "No Cards", "You must add at least one card in order to export a deck.", "Ok");
                 return;
             }
 
@@ -154,11 +154,11 @@ namespace ScrollsPost {
             GUI.skin = buttonSkin;
 
             GUIPositioner subMenuPositioner = App.LobbyMenu.getSubMenuPositioner(1f, 4);
-            var rect = subMenuPositioner.getButtonRect(4f);
+            var rect = subMenuPositioner.getButtonRect(3f);
 
-            rect.width *= 0.80f;
-            rect.x -= (rect.width * 0.50f);
-           
+            rect.width *= 0.70f;
+            rect.x -= (rect.width * 0.10f);
+
             if( LobbyMenu.drawButton(rect, "Import Deck") ) {
                 App.Popups.ShowTextInput(this, "", "Imports a deck from ScrollsPost", "import", "Deck Import", "Enter an URL:", "Import");
             }
