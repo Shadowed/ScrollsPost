@@ -164,7 +164,6 @@ namespace ScrollsPost {
                 RoomChatMessageMessage msg = (RoomChatMessageMessage)info.arguments[0];
                 if( msg.text.Equals("/sp") || msg.text.Equals("/scrollspost") || msg.text.Equals("/scrollpost") ) {
                     new Thread(new ThreadStart(configGUI.Show)).Start();
-
                     SendMessage("Configuration opened");
                 } else if( msg.text.StartsWith("/pc-1h ") ) {
                     new PriceCheck(this, "1-hour", msg.text.Split(new char[] { ' ' }, 2)[1]);
@@ -252,10 +251,14 @@ namespace ScrollsPost {
         }
 
         public void SendMessage(String message) {
+            var room = App.ArenaChat.ChatRooms.GetCurrentRoom();
+            if( room == null )
+                return;
+
             RoomChatMessageMessage msg = new RoomChatMessageMessage();
             msg.from = GetName();
             msg.text = message;
-            msg.roomName = App.ArenaChat.ChatRooms.GetCurrentRoom().name;
+            msg.roomName = room.name;
 
             App.ChatUI.handleMessage(msg);
             App.ArenaChat.ChatRooms.ChatMessage(msg);
