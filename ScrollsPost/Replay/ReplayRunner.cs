@@ -554,15 +554,18 @@ namespace ScrollsPost {
         // Check the format and see if we need to do any upgrading
         private String[] UpgradeFile(Dictionary<String, object> metadata, String path, StreamReader sr) {
             String[] parts = (metadata["version"] as String).Split(new char[] { '.' }, 3);
-            float version = Convert.ToSingle(parts[0] + "." + parts[1]);
+            float major = Convert.ToSingle(parts[0]);
+            float minor = Convert.ToSingle(parts[1]);
 
-            float format_version = version;
+            float format_major = major;
+            float format_minor = minor;
             if( metadata.ContainsKey("format-version") ) {
                 parts = (metadata["format-version"] as String).Split(new char[] { '.' }, 3);
-                format_version = Convert.ToSingle(parts[0] + "." + parts[1]);
+                format_major = Convert.ToSingle(parts[0]);
+                format_minor = Convert.ToSingle(parts[1]);
             }
 
-            if( version >= 0.96f || format_version >= 0.96f )
+            if( major != 0f || minor >= 96f || format_major != 0f && format_minor >= 96f )
                 return new string[] {};
 
             // Upgrade from 0.95.x -> 0.96.0
@@ -629,7 +632,7 @@ namespace ScrollsPost {
         }
 
         // Initial replay start
-        private Dictionary<String, object> PullMetadata(StreamReader sr) {
+       private Dictionary<String, object> PullMetadata(StreamReader sr) {
             String line = sr.ReadLine();
             String[] parts = line.Split(new char[] { '|' }, 2);
             return new JsonReader().Read<Dictionary<String, object>>(parts[1]);
