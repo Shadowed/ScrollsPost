@@ -34,6 +34,9 @@ namespace ScrollsPost {
             // Fresh install
             } else {
                 config = new Dictionary<String, object>();
+                config["sync-notif"] = true;
+                config["trade"] = true;
+                config["replay"] = "ask";
 
                 newInstall = true;
             }

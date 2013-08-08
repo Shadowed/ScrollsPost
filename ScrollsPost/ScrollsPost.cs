@@ -52,10 +52,11 @@ namespace ScrollsPost {
             battleType = typeof(BattleMode);
             deckType = typeof(DeckBuilder2);
 
-            // Added trade/sync notification
-            if( !config.ContainsKey("replay") ) {
-                config.Add("replay", "ask");
-            }
+            if( !config.ContainsKey("replay") ) config.Add("replay", "ask");
+            if( !config.ContainsKey("sync-notif") ) config.Add("sync-notif", true);
+            if( !config.ContainsKey("trade") ) config.Add("trade", true);
+
+
 
             // Old version migration + initial setup
             if( config.NewInstall() ) {
