@@ -76,7 +76,7 @@ namespace ScrollsPost {
                     var card_id = Convert.ToInt32(parsed.Substring(1).ToString());
 
                     deckCards[card_id] = quantity;
-                    totalCards += 1;
+                    totalCards += quantity;
                 }
             } catch( Exception ex ) {
                 Console.WriteLine("***** EXCEPTION {0}", ex.ToString());
@@ -141,9 +141,9 @@ namespace ScrollsPost {
             if( missingCards.Count == 0 ) {
                 App.Popups.ShowOk(this, "", "Fully Imported!", String.Format("All {0} cards of the deck have been fully imported. You weren't missing any of the cards required to construct it. Enjoy!", totalCards), "Ok");
             } else if( missingCards.Count <= 6 ) {
-                App.Popups.ShowOk(this, "", "Partially Imported", String.Format("Only {0} of {1} cards were imported. Missing:\n{2}", (totalCards - totalMissing), totalCards, String.Join("\n", missingCards.ToArray())), "Ok");   
+                App.Popups.ShowOk(this, "", "Partially Imported", String.Format("Imported {0} cards out of {1} total. Missing:\n{2}", (totalCards - totalMissing), totalCards, String.Join("\n", missingCards.ToArray())), "Ok");   
             } else {
-                App.Popups.ShowScrollText(this, "", "Partially Imported", String.Format("Only {0} of {1} cards were imported. The below are the cards and quanities that we were unable to find in your collection.\n\n{2}", (totalCards - totalMissing), totalCards, String.Join("\n", missingCards.ToArray())), "Ok");   
+                App.Popups.ShowScrollText(this, "", "Partially Imported", String.Format("Imported {0} cards out of {1} total. The below are the cards and quanities that we were unable to find in your collection.\n\n{2}", (totalCards - totalMissing), totalCards, String.Join("\n", missingCards.ToArray())), "Ok");   
             }
         }
 
