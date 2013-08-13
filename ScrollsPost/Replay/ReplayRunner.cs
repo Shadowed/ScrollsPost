@@ -479,7 +479,7 @@ namespace ScrollsPost {
             SceneLoader.loadScene("_Lobby");
 
             // Leave the channel it puts us in now
-            if( metadata != null ) {
+            if( metadata != null && metadata.ContainsKey("game-id") ) {
                 App.ArenaChat.RoomExit(new Room(String.Format("match-{0}", metadata["game-id"]), RoomType.ChatRoom), false);
             }
         }
@@ -495,6 +495,9 @@ namespace ScrollsPost {
                 while( sr.Peek() > 0 ) {
                     String line = sr.ReadLine();
                     if( String.IsNullOrEmpty(line) ) continue;
+                    // ScrollsGuide replays leak friends lists, strip them out when converting replays
+                    if( line.Contains("\"msg\":\"GetFriendRequests\"") || line.Contains("\"msg\":\"GetBlockedPersons\"") || line.Contains("\"msg\":\"GetFriends\"") )
+                        continue;
 
                     // We need to figure out the metadata for the replay primarily
                     if( line.Contains("ServerInfo") ) {

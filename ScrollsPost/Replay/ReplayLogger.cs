@@ -49,7 +49,7 @@ namespace ScrollsPost {
                 }
 
                 enabled = false;
-
+                            
             // Not logging yet
             } else if( !enabled ) {
                 return;
