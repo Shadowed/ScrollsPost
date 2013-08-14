@@ -31,7 +31,7 @@ namespace ScrollsPost {
 
         // WARNING: This is used for internal configs, please do not change it or it will cause bugs.
         // Change GetVersion() instead to not use the constant if it's needed.
-        private static int CURRENT_VERSION = 11;
+        private static int CURRENT_VERSION = 12;
 
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
@@ -56,8 +56,6 @@ namespace ScrollsPost {
             if( !config.ContainsKey("sync-notif") ) config.Add("sync-notif", true);
             if( !config.ContainsKey("trade") ) config.Add("trade", true);
 
-
-
             // Old version migration + initial setup
             if( config.NewInstall() ) {
                 new Thread(new ThreadStart(configGUI.ShowIntro)).Start();
@@ -70,6 +68,8 @@ namespace ScrollsPost {
                     new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)9);
                 } else if( config.VersionBelow(11) ) {
                     new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)10);
+                } else if( config.VersionBelow(12) ) {
+                    new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)11);
                 }
             }
 

@@ -5,11 +5,13 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
+using System.Text.RegularExpressions;
+using JsonFx.Json;
 using UnityEngine;
 
 namespace ScrollsPost {
     public class DeckManager : IOkCallback, IOkStringCancelCallback{
-        //private ScrollsPost.Mod mod;
+        private ScrollsPost.Mod mod;
 
         private String baseStart = "0123456789";
         private String base77 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -18,10 +20,22 @@ namespace ScrollsPost {
         private GUISkin buttonSkin;
 
         public DeckManager(ScrollsPost.Mod mod) {
-            //this.mod = mod;
+            this.mod = mod;
             buttonSkin = (GUISkin) Resources.Load("_GUISkins/Lobby");
         }
        
+        private String GenerateDeckURL(Dictionary<int, int> compiledDeck) {
+            var cards = new List<String>();
+            // Version
+            cards.Add("1");
+
+            foreach( KeyValuePair<int, int> row in compiledDeck ) {
+                cards.Add(ConvertBase(String.Format("{0}{1}", row.Value, row.Key), baseStart, base77));
+            }
+
+            return String.Format("http://www.scrollspost.com/deckbuilder#{0}", String.Join(";", cards.ToArray()));
+        }
+
         private void ExportDeck() {
             List<DeckCard> deck = (List<DeckCard>)typeof(DeckBuilder2).GetField("tableCards", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(deckBuilder);
 
@@ -37,16 +51,48 @@ namespace ScrollsPost {
                 return;
             }
 
-            var cards = new List<String>();
-            // Version
-            cards.Add("1");
+            var url = GenerateDeckURL(compiledDeck);
+            App.Popups.ShowTextInput(this, url, "Above URL can be shared or imported in-game", "export", "Deck Export", "Deck Builder URL:", "Ok");
+        }
 
-            foreach( KeyValuePair<int, int> row in compiledDeck ) {
-                cards.Add(ConvertBase(String.Format("{0}{1}", row.Value, row.Key), baseStart, base77));
+        private void ImportSGDeck(String url) {
+            Match match = Regex.Match(url, "([0-9]+)$", RegexOptions.IgnoreCase);
+            if( !match.Success ) {
+                App.Popups.ShowTextInput(this, "", "<color=red>Not a valid ScrollsGuide Deck Builder URL</color>", "import", "Deck Import", "Enter an URL:", "Import");
+                return;
             }
 
-            var url = String.Format("http://www.scrollspost.com/deckbuilder#{0}", String.Join(";", cards.ToArray()));
-            App.Popups.ShowTextInput(this, url, "Above URL can be shared or imported in-game", "export", "Deck Export", "Deck Builder URL:", "Ok");
+            App.Popups.ShowInfo("Import Deck", "We're loading the deck from ScrollsGuide. This might take a second.");
+
+            int deckID = Convert.ToInt32(match.Groups[1].Value);
+
+            String result = "";
+            try {
+                WebClient wc = new WebClient();
+                wc.QueryString.Add("id", deckID.ToString());
+
+                result = wc.DownloadString(new Uri("http://a.scrollsguide.com/deck/load"));
+
+            } catch ( WebException we ) {
+                App.Popups.ShowOk(this, "fail", "HTTP Error", "Unable to load deck from ScrollsGuide\n\n" + we.Message, "Ok");
+                mod.WriteLog("Failed to load deck data", we);
+                return;
+            }
+
+            var msg = (Dictionary<String, object>)new JsonReader().Read<Dictionary<String, object>>(result);
+            if( !msg["msg"].Equals("success") ) {
+                App.Popups.ShowTextInput(this, "", "<color=red>Not a valid ScrollsGuide Deck Builder URL</color>", "import", "Deck Import", "Enter an URL:", "Import");
+                return;
+            }
+
+            var data = (object[])((Dictionary<String, object>) msg["data"])["scrolls"];
+            var compiledDeck = new Dictionary<int, int>();
+
+            foreach( Dictionary<String, object> card in data ) {
+                compiledDeck[Convert.ToInt32(card["id"])] = Convert.ToInt32(card["c"]);
+            }
+
+            ImportDeck(GenerateDeckURL(compiledDeck));
         }
 
         private void ImportDeck(String url) {
@@ -64,7 +110,7 @@ namespace ScrollsPost {
                 return;
             }
 
-            App.Popups.ShowInfo("Import Deck", "We're importing the deck. This might take a second.\n\nContact us at support@scrollspost.com if you run into any issues or have any questions!");
+            App.Popups.ShowInfo("Import Deck", "We're importing the deck. This might take a second.");
 
             var totalCards = 0;
 
@@ -95,7 +141,6 @@ namespace ScrollsPost {
             var allCardsField = typeof(DeckBuilder2).GetField("allCards", BindingFlags.NonPublic | BindingFlags.Instance);
             var collSorterField = typeof(DeckBuilder2).GetField("collectionSorter", BindingFlags.NonPublic | BindingFlags.Instance);
             var deckSortType = collSorterField.FieldType;
-
 
             List<Card> cards = new List<Card>((allCardsField.GetValue(deckBuilder) as List<Card>));
 
@@ -137,7 +182,7 @@ namespace ScrollsPost {
                 missingCards.Add(String.Format("{0} x {1}", row.Value, types.get(row.Key).name));
                 totalMissing += row.Value;
             }
-            
+
             if( missingCards.Count == 0 ) {
                 App.Popups.ShowOk(this, "", "Fully Imported!", String.Format("All {0} cards of the deck have been fully imported. You weren't missing any of the cards required to construct it. Enjoy!", totalCards), "Ok");
             } else if( missingCards.Count <= 6 ) {
@@ -160,7 +205,7 @@ namespace ScrollsPost {
             rect.x -= (rect.width * 0.10f);
 
             if( LobbyMenu.drawButton(rect, "Import Deck") ) {
-                App.Popups.ShowTextInput(this, "", "Imports a deck from ScrollsPost", "import", "Deck Import", "Enter an URL:", "Import");
+                App.Popups.ShowTextInput(this, "", "Imports a deck from ScrollsPost or ScrollsGuide", "import", "Deck Import", "Enter an URL:", "Import");
             }
 
             rect.x += rect.width + 8f;
@@ -173,7 +218,11 @@ namespace ScrollsPost {
 
         public void PopupOk(String type, String choice) {
             if( type == "import" ) {
-                ImportDeck(choice);
+                if( !choice.Contains("scrollsguide") ) {
+                    ImportDeck(choice);
+                } else {
+                    ImportSGDeck(choice);
+                }
             }
         }
 

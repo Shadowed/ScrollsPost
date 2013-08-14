@@ -55,6 +55,8 @@ namespace ScrollsPost {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.0.9", "* Instant seeking and speed controls are back!\n* You can now play replays from older versions of Scrolls\n* You can now play ScrollsGuide replays (either by file or ScrollsGuide URL) including pre-0.96 replays", "Done");
             } else if( version == 10 ) {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.1.0", "ScrollsPost now has Deck Builder support!\n\n* Build decks on ScrollsPost.com and import them in-game, or share them to others\n* Easily import decks from ScrollsPost.com in-game\n* Export your in-game decks to quickly share new decks with others", "Done");
+            } else if( version == 11 ) {
+                App.Popups.ShowOk(this, "done", "ScrollsPost v1.1.2 - Fixes", "* Fixed the card # when cards are missing being inaccurate\n* You can now import ScrollsGuide decks as well as ScrollsPost", "Done");
             }
         }
 
