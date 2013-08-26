@@ -63,6 +63,13 @@ namespace ScrollsPost {
             return config.ContainsKey("conf-version") ? (GetInt("conf-version") < version) : true;
         }
 
+        public void QueueWrite() {
+            if( writer == null ) {
+                writer = new Thread(new ThreadStart(DelayedWrite));
+                writer.Start();
+            }
+        }
+
         public object Get(String key) {
             return config[key];
         }
@@ -97,19 +104,12 @@ namespace ScrollsPost {
 
             config.Remove(key);
 
-            if( writer == null ) {
-                writer = new Thread(new ThreadStart(DelayedWrite));
-                writer.Start();
-            }
+            QueueWrite();
         }
 
         public void Add(String key, object value) {
             config[key] = value;
-
-            if( writer == null ) {
-                writer = new Thread(new ThreadStart(DelayedWrite));
-                writer.Start();
-            }
+            QueueWrite();
         }
     }
 }

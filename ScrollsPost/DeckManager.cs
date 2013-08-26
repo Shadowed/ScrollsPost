@@ -202,7 +202,9 @@ namespace ScrollsPost {
             var rect = subMenuPositioner.getButtonRect(3f);
 
             rect.width *= 0.70f;
-            rect.x -= (rect.width * 0.10f);
+            rect.height *= 0.70f;
+            rect.x += (rect.width * 3f);
+            rect.y += rect.height * 0.40f;
 
             if( LobbyMenu.drawButton(rect, "Import Deck") ) {
                 App.Popups.ShowTextInput(this, "", "Imports a deck from ScrollsPost or ScrollsGuide", "import", "Deck Import", "Enter an URL:", "Import");
