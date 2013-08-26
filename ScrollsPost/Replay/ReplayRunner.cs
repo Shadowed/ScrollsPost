@@ -377,6 +377,10 @@ namespace ScrollsPost {
             // Seeked outside of the total rounds
             if( seekTurn > 0 ) {
                 App.Popups.ShowOk(this, "", "Too Far", String.Format("You tried to seek to round {0}, but the game ends at round {1}.", seekTurn, lastTurn), "Ok");
+
+                seekTurn = 0;
+                rewind = true;
+                internalPause = false;
                 return;
             }
 
