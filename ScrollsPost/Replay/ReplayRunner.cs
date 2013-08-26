@@ -38,6 +38,9 @@ namespace ScrollsPost {
         private FieldInfo effectField;
         //private FieldInfo speedField;
         private FieldInfo animFrameField;
+        private MethodInfo nextMessageMethod;
+        private ThreadedMessageParser parserField;
+
 
         public ReplayRunner(ScrollsPost.Mod mod, String path) {
             this.mod = mod;
@@ -89,6 +92,18 @@ namespace ScrollsPost {
             sceneLoaded = false;
             playerThread = new Thread(new ThreadStart(Start));
             playerThread.Start();
+        }
+
+        public void OnUpdate() {
+            if( parserField == null ) {
+                parserField = (ThreadedMessageParser) typeof(Communicator).GetField("messageParser", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(App.Communicator);
+            }
+
+            parserField.update();
+
+            if( parserField.hasMessage() ) {
+                nextMessageMethod.Invoke(App.Communicator, new object[] { });
+            }
         }
 
         public Boolean OnHandleNextMessage() {
@@ -479,6 +494,13 @@ namespace ScrollsPost {
             SceneLoader.loadScene("_Lobby");
 
             // Leave the channel it puts us in now
+            typeof(Communicator).GetField("isOnGameServer", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(App.Communicator, false);
+
+            String ip = typeof(Communicator).GetField("lastIp", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(App.Communicator).ToString();
+            int port = Convert.ToInt16(typeof(Communicator).GetField("lastPort", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(App.Communicator));
+            App.Communicator.makeConnection(ip, port);
+
+
             if( metadata != null && metadata.ContainsKey("game-id") ) {
                 App.ArenaChat.RoomExit(new Room(String.Format("match-{0}", metadata["game-id"]), RoomType.ChatRoom), false);
             }
@@ -645,6 +667,7 @@ namespace ScrollsPost {
             deselectMethod = typeof(BattleMode).GetMethod("deselectAllTiles", BindingFlags.Instance | BindingFlags.NonPublic);
             effectField = typeof(BattleMode).GetField("currentEffect", BindingFlags.NonPublic | BindingFlags.Instance);
             animFrameField = typeof(AnimPlayer).GetField("_fframe", BindingFlags.NonPublic | BindingFlags.Instance);
+            nextMessageMethod = typeof(Communicator).GetMethod("handleNextMessage", BindingFlags.NonPublic | BindingFlags.Instance);
 
             String[] primaryUpgrade;
             String[] secondaryUpgrade = new string[] {};
@@ -707,7 +730,6 @@ namespace ScrollsPost {
                 }
 
                 String line = primary.ReadLine();
-
                 // Secondaries turn
                 if( secondary != null && line.Contains("TurnBegin") && !line.Contains(primaryType) ) {
                     ParseLine(primaryID, line);

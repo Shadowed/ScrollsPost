@@ -58,7 +58,7 @@ namespace ScrollsPost {
             } else if( version == 11 ) {
                 App.Popups.ShowOk(this, "done", "ScrollsPost v1.1.2 - Fixes", "* Fixed the card # when cards are missing being inaccurate\n* You can now import ScrollsGuide decks as well as ScrollsPost", "Done");
             } else if( version == 12 ) {
-                App.Popups.ShowOk(this, "done", "ScrollsPost v1.1.3 - Decay", "* Fixed deck import/export buttons being hidden by the new search field\n* Fixed slash commands not working", "Done");
+                App.Popups.ShowOk(this, "done", "ScrollsPost v1.1.3 - Decay", "* Fixed deck import/export buttons being hidden by the new search field\n* Fixed slash commands not working\n* Fixed replays not working", "Done");
             }
         }
 

@@ -100,7 +100,12 @@ namespace ScrollsPost {
                     scrollsTypes["CardView"].Methods.GetMethod("updateGraphics")[0],
 
                     scrollsTypes["AnimPlayer"].Methods.GetMethod("UpdateOnly")[0],
+
                     scrollsTypes["Communicator"].Methods.GetMethod("handleNextMessage")[0],
+                    scrollsTypes["Communicator"].Methods.GetMethod("Update")[0],
+
+                    scrollsTypes["EndGameScreen"].Methods.GetMethod("GoToLobby")[0],
+
                     scrollsTypes["BattleMode"].Methods.GetMethod("addDelay")[0],
                     scrollsTypes["BattleMode"].Methods.GetMethod("effectDone")[0],
                     scrollsTypes["iTween"].Methods.GetMethod("Launch")[0],
@@ -128,7 +133,12 @@ namespace ScrollsPost {
                     return true;
                 }
             } else if( replayRunner != null ) {
-                if( info.targetMethod.Equals("handleNextMessage") ) {
+                if( info.targetMethod.Equals("Update") ) {
+                    replayRunner.OnUpdate();
+                    nextReturnVal = true;
+                    return true;
+
+                } else if( info.targetMethod.Equals("handleNextMessage") ) {
                     if( replayRunner.OnHandleNextMessage() ) {
                         nextReturnVal = true;
                         return true;
@@ -150,6 +160,11 @@ namespace ScrollsPost {
                         return true;
                     }
                 } else if( info.targetMethod.Equals("Launch") && replayRunner.SpeedUpGame() ) {
+                    nextReturnVal = true;
+                    return true;
+                } else if( info.targetMethod.Equals("GoToLobby") ) {
+                    StopReplayRunner();
+
                     nextReturnVal = true;
                     return true;
                 }

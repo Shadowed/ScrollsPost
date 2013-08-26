@@ -76,7 +76,6 @@ namespace ScrollsPost {
                 metadata["winner"] = "SPWINNERSP";
                 metadata["played-at"] = (int) lastMessage;
                 metadata["version"] = currentVersion;
-                metadata["format-version"] = currentVersion;
 
                 replayPath = replayFolder + Path.DirectorySeparatorChar + String.Format("{0}-{1}.spr", metadata["game-id"], metadata["perspective"]);
 
