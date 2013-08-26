@@ -31,7 +31,7 @@ namespace ScrollsPost {
 
         // WARNING: This is used for internal configs, please do not change it or it will cause bugs.
         // Change GetVersion() instead to not use the constant if it's needed.
-        private static int CURRENT_VERSION = 12;
+        private static int CURRENT_VERSION = 13;
 
         public Mod() {
             logFolder = this.OwnFolder() + Path.DirectorySeparatorChar + "logs";
@@ -59,8 +59,6 @@ namespace ScrollsPost {
             // Old version migration + initial setup
             if( config.NewInstall() ) {
                 new Thread(new ThreadStart(configGUI.ShowIntro)).Start();
-            } else if( !config.ContainsKey("conf-version") ) {
-                new Thread(new ThreadStart(configGUI.ShowAuthPrompt)).Start();
             } else {
                 if( config.VersionBelow(9) ) {
                     new Thread(new ParameterizedThreadStart(configGUI.ShowChanges)).Start((object)8);
@@ -74,8 +72,10 @@ namespace ScrollsPost {
             }
 
             // Just updated
-            if( config.NewInstall() || !config.ContainsKey("conf-version") || config.GetInt("conf-version") != CURRENT_VERSION ) {
+            if( !config.NewInstall() && (!config.ContainsKey("conf-version") || config.GetInt("conf-version") != CURRENT_VERSION) ) {
                 config.Add("conf-version", CURRENT_VERSION);
+            } else if( config.NewInstall() ) {
+                config.QueueWrite();
             }
 
             // Check if we need to resync cards
